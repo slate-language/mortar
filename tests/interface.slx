@@ -1,0 +1,93 @@
+import * as lib from "../mortar.slx"
+import page from "../docs/components.md"
+
+// THE INTERFACE, AS A TEST.
+//
+// **THIS FILE IS THE SAME IN `mortar` AND IN `chalk`, AND THAT IS THE WHOLE POINT OF IT.** Two
+// libraries that an application can swap have to agree about their names before they can disagree
+// about anything else, and a table in a README is a description of an interface rather than the
+// interface. This is checked on every run of both suites, so a component added to one and forgotten
+// in the other is a red test rather than a page that stops compiling in somebody else's application.
+//
+// **It says nothing about what anything LOOKS like**, which is the other half of the arrangement:
+// the two libraries share this file and share nothing else.
+
+// Every component the library exports.
+val Components = ["Theme", "Page", "VisuallyHidden",
+                  "Avatar", "Byline", "Timestamp", "Photo",
+                  "Card", "ThreadCard", "CardList", "Post", "PostList",
+                  "Tag", "TagList", "Pagination", "Segmented", "SortControls",
+                  "EmptyState", "Problem", "Live", "Toast",
+                  "Form", "Field", "TextArea", "FileInput", "Button", "Actions"]
+
+// The hooks and the helpers that are not components.
+val Functions = ["useTheme", "problemReason"]
+
+// The closed sets of words, each of them a list of strings.
+val Words = ["Themes", "Sizes", "Shows", "CardLevels", "PostLevels", "LiveManners", "Tones",
+             "FormMethods", "ButtonKinds", "ButtonVariants"]
+
+@test
+EVERY_COMPONENT_IS_THERE_AND_IS_A_FUNCTION()
+    for name in Components
+        val value = lib[name] ?? null
+
+        if value == null then throw "this library does not export `" + name + "`"
+        if !(value is function) then throw "`" + name + "` is exported and is not a function"
+
+@test
+EVERY_HOOK_AND_HELPER_IS_THERE()
+    for name in Functions
+        val value = lib[name] ?? null
+
+        if value == null then throw "this library does not export `" + name + "`"
+        if !(value is function) then throw "`" + name + "` is exported and is not a function"
+
+@test
+EVERY_CLOSED_SET_OF_WORDS_IS_A_LIST_OF_WORDS()
+    for name in Words
+        val value = lib[name] ?? null
+
+        if value == null then throw "this library does not export `" + name + "`"
+        if !(value is array) then throw "`" + name + "` is exported and is not a list"
+        if len(value) == 0 then throw "`" + name + "` is exported and is empty"
+
+        for one in value
+            if !(one is string) then throw "`" + name + "` holds something that is not a word"
+
+@test
+THE_INTERFACE_IS_THIRTY_NINE_NAMES_AND_NOTHING_ELSE()
+    // **A count, so that a name added to one library and not the other is caught here** rather than
+    // in an application that imported it.
+    assertEq(len(Components) + len(Functions) + len(Words), 39)
+
+@test
+THE_WORDS_ARE_THE_ONES_THE_COMPONENTS_ACTUALLY_CHECK()
+    assertEq(lib.Themes, ["light", "dark"])
+    assertEq(lib.Sizes, ["small", "medium", "large"])
+    assertEq(lib.Shows, ["date", "moment"])
+    assertEq(lib.CardLevels, ["h2", "h3", "h4"])
+    assertEq(lib.PostLevels, ["h1", "h2", "h3"])
+    assertEq(lib.LiveManners, ["polite", "assertive"])
+    assertEq(lib.Tones, ["info", "good", "danger"])
+    assertEq(lib.FormMethods, ["get", "post"])
+    assertEq(lib.ButtonKinds, ["button", "submit", "reset"])
+    assertEq(lib.ButtonVariants, ["primary", "quiet", "danger"])
+
+@test
+THE_DOCS_PAGE_HAS_A_SECTION_FOR_EVERY_COMPONENT()
+    // **So that the props table cannot quietly fall behind the library.** A component added and not
+    // written up is a red test here rather than a page nobody thinks to look at -- and the docs
+    // arrive as an ASSET IMPORT, which is slate reading the file while this suite is compiled.
+    for name in Components
+        if indexOf(page, "\n## " + name + "\n") == null
+            throw "docs/components.md has no `## " + name + "` section"
+
+@test
+THE_DOCS_PAGE_HAS_THE_HOOKS_AND_EVERY_SET_OF_WORDS()
+    if indexOf(page, "## `useTheme()`") == null
+        throw "docs/components.md does not write up `useTheme`"
+
+    for name in Words
+        if indexOf(page, "| `" + name + "` |") == null
+            throw "docs/components.md does not list `" + name + "`"

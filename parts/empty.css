@@ -1,0 +1,13 @@
+/* What a list says when there is nothing in it. */
+
+.m-empty {
+    border: 1px dashed var(--m-line);
+    border-radius: var(--m-radius);
+    padding: 2rem 1.25rem;
+    text-align: center;
+    color: var(--m-ink-soft);
+
+    & h2 { margin: 0 0 .35rem; font-size: 1.05rem; color: var(--m-ink); }
+    & p { margin: 0; color: var(--m-ink-faint); }
+    & .m-do { margin-top: 1rem; }
+}

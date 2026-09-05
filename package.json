@@ -1,0 +1,7 @@
+{
+    "name": "mortar-dev",
+    "private": true,
+    "devDependencies": {
+        "jsdom": "^26.1.0"
+    }
+}

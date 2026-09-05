@@ -1,0 +1,190 @@
+import { createElement, Fragment, mount, html, flush, useContext, useState } from lath
+import { addressIs } from lath/router
+import { Avatar, Theme, Themes, useTheme } from "../mortar.slx"
+
+import { countOf, fell, tree } from "./support.sl"
+
+// The theme: where the choice lives, and what the stylesheets select on.
+//
+// **THE URL IS THE DEFAULT AND THAT IS THE DECISION.** `?theme=dark` is something a person can
+// bookmark, send to somebody else and press back out of -- and, which matters more, something the
+// *server* can read, so the first paint is already the right colour and there is nothing for a
+// hydrating page to correct. `addressIs` below is what a server does when it hands the router a
+// request's path; on a page it is `usePath` doing the same thing on every render.
+
+markup(el) -> string = tree(html(mount(el)))
+
+// The address every test starts from, since the router holds one for the whole module.
+plain() =
+    addressIs("/")
+
+    null
+
+@test
+A_THEME_WITH_NOTHING_IN_THE_URL_IS_LIGHT()
+    plain()
+
+    val out = markup(<Theme><p>x</p></Theme>)
+
+    assertEq(out, "<div class=\"mortar\" data-theme=\"light\"><p>x</p></div>")
+
+@test
+THE_THEME_IN_THE_URL_IS_THE_THEME_THE_SERVER_RENDERS()
+    addressIs("/threads?theme=dark")
+
+    assert(contains(markup(<Theme><p>x</p></Theme>), "data-theme=\"dark\""))
+
+    plain()
+
+@test
+A_THEME_HANDED_IN_WINS_OVER_THE_URL_WHICH_IS_THE_COOKIE_ARRANGEMENT()
+    // **The second of the two arrangements**: an application that would rather not spend a query
+    // parameter reads a cookie on the server and hands the value in. The component is the same one.
+    addressIs("/?theme=dark")
+
+    assert(contains(markup(<Theme theme="light"><p>x</p></Theme>), "data-theme=\"light\""))
+
+    plain()
+
+@test
+USE_THEME_READS_WHAT_THE_PROVIDER_RESOLVED()
+    addressIs("/?theme=dark")
+
+    Reader(props: object) =
+        val [now, set] = useTheme()
+
+        <p>{now}</p>
+
+    assert(contains(markup(<Theme><Reader/></Theme>), "<p>dark</p>"))
+
+    plain()
+
+@test
+USE_THEME_WITH_NO_THEME_ABOVE_IT_IS_LIGHT_AND_ITS_SETTER_SAYS_WHY()
+    // **A default rather than a fault**, which is `useContext`'s own rule and is what lets a single
+    // component be rendered on its own in a test. The setter is the half that cannot have one.
+    plain()
+
+    var setter = null
+
+    Alone(props: object) =
+        val [now, set] = useTheme()
+
+        setter = set
+
+        <p>{now}</p>
+
+    assert(contains(markup(<Alone/>), "<p>light</p>"))
+    assert(contains(fell(() -> setter("dark")), "useTheme's setter needs a `Theme`"))
+
+@test
+SETTING_THE_THEME_REWRITES_THE_QUERY_AND_LIGHT_IS_THE_ABSENCE_OF_IT()
+    // **Writing the default out would put a parameter on every URL anybody copied**, so `set("light")`
+    // takes it off rather than writing four letters nobody needs.
+    plain()
+
+    var setter = null
+
+    Toggle(props: object) =
+        val [now, set] = useTheme()
+
+        setter = set
+
+        <p>{now}</p>
+
+    val root = mount(<Theme><Toggle/></Theme>)
+
+    assert(contains(html(root), "<p>light</p>"))
+
+    setter("dark")
+    flush(root)
+
+    assert(contains(html(root), "<p>dark</p>"))
+    assert(contains(html(root), "data-theme=\"dark\""))
+
+    setter("light")
+    flush(root)
+
+    assert(contains(html(root), "<p>light</p>"))
+
+    plain()
+
+@test
+A_CONTROLLED_THEME_WITH_NO_ONCHANGE_SAYS_SO_RATHER_THAN_DOING_NOTHING()
+    plain()
+
+    var setter = null
+
+    Toggle(props: object) =
+        val [now, set] = useTheme()
+
+        setter = set
+
+        <p>{now}</p>
+
+    mount(<Theme theme="light"><Toggle/></Theme>)
+
+    val said = fell(() -> setter("dark"))
+
+    assert(contains(said, "Theme was given a `theme`"))
+    assert(contains(said, "`onChange`"))
+
+@test
+A_CONTROLLED_THEME_HANDS_THE_CHANGE_TO_THE_APPLICATION()
+    plain()
+
+    var asked = ""
+    var setter = null
+
+    took(next) =
+        asked = next
+
+        null
+
+    Toggle(props: object) =
+        val [now, set] = useTheme()
+
+        setter = set
+
+        <p>{now}</p>
+
+    mount(<Theme theme="light" onChange={took}><Toggle/></Theme>)
+
+    setter("dark")
+
+    assertEq(asked, "dark")
+
+@test
+A_THEME_THAT_IS_NEITHER_WORD_NAMES_THE_PROP_AND_LISTS_THEM()
+    plain()
+
+    val said = fell(() -> markup(<Theme theme="midnight"><p>x</p></Theme>))
+
+    assert(contains(said, "Theme's `theme`"))
+    assert(contains(said, "\"light\", \"dark\""))
+
+@test
+A_THEME_IN_THE_URL_THAT_IS_NEITHER_WORD_NAMES_WHERE_IT_CAME_FROM()
+    // **`?theme` and not `theme`**, because the mistake is in the address and not in the tag -- and a
+    // message naming a prop nobody wrote would send the reader to the wrong file.
+    addressIs("/?theme=midnight")
+
+    assert(contains(fell(() -> markup(<Theme><p>x</p></Theme>)), "Theme's `?theme`"))
+
+    plain()
+
+@test
+THE_TWO_WORDS_ARE_EXPORTED_SO_AN_APPLICATION_NEED_NOT_WRITE_THEM_OUT()
+    assertEq(Themes, ["light", "dark"])
+
+@test
+THE_TOKENS_CARRY_BOTH_THEMES_AND_A_BARE_COMPONENT_STILL_HAS_THEM()
+    // **The `:root` block is what makes a single component work on its own** -- an `<Avatar/>` with
+    // no `Theme` above it still has the names its rules read.
+    plain()
+
+    val alone = html(mount(<Avatar name="A"/>))
+
+    assert(contains(alone, ":root {"))
+    assert(contains(alone, "[data-theme=\"dark\"]"))
+    assert(contains(alone, "color-scheme: dark"))

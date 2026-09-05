@@ -1,0 +1,23 @@
+/* Who wrote something, and when. */
+
+.m-byline {
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+    margin: .35rem 0;
+    font-size: .85rem;
+    color: var(--m-ink-faint);
+
+    & .m-who {
+        color: var(--m-ink-soft);
+        text-decoration: none;
+        font-weight: 550;
+
+        &:hover { color: var(--m-accent); }
+    }
+}
+
+.m-at {
+    color: var(--m-ink-faint);
+    font-variant-numeric: tabular-nums;
+}

@@ -1,0 +1,75 @@
+// What the page says when something arrived that the reader did not ask for.
+//
+// **A LIVE REGION HAS TO BE ON THE PAGE BEFORE THE MESSAGE IS**, and that is the one thing about
+// this component that is not obvious and the reason it renders an element even when it is holding
+// nothing: a screen reader watches regions it already knows about, so a `<div aria-live>` created
+// at the same moment as the text inside it announces nothing at all. `Live` is mounted with the page
+// and `Toast` is the list inside it.
+//
+// **IT IS FOR A REPLY THAT ARRIVED, NOT FOR A BUTTON THAT WAS PRESSED.** Something the reader did is
+// answered where they are looking; this is for what the server pushed while they were reading -- a
+// new reply on a thread, a job that finished, a connection that dropped.
+
+import { createElement, Fragment, style } from lath
+
+import tokens from "./tokens.css"
+import sheet from "./live.css"
+import { choice as oneOf, classes, flag, list, maybeFn, rows, text } from "./props.sl"
+
+// How urgently a region interrupts. `polite` waits for a pause; `assertive` cuts in and is almost
+// never what a page wants.
+export val Manner = ["polite", "assertive"]
+
+// The tones a message can carry.
+export val Tones = ["info", "good", "danger"]
+
+// The region itself: always rendered, so that what lands in it later is announced.
+export live({ live: how = "polite", atomic = false, class: extra = "", children = [] }) =
+    style(tokens)
+    style(sheet)
+
+    val manner = oneOf("Live", "live", how, Manner)
+    val whole = flag("Live", "atomic", atomic)
+    val kids = list("Live", "children", children)
+
+    // **`display: contents` on the wrapper**, so a region that exists for the whole life of the page
+    // costs the layout nothing and can be put wherever it belongs in the document order.
+    val out = <div class={classes("Live", "m-live", extra)} aria-live={manner}
+                   aria-atomic={if whole then "true" else "false"}>{kids}</div>
+
+    out
+
+val Live = live
+
+// The messages themselves.
+//
+// `messages` is a list of records carrying an `id` and a `text`, and optionally a `tone`. **The `id`
+// is what keys the row**, which is what makes an arriving message insert one element rather than
+// rewrite the list -- and what keeps the caret and the reader's place where they were.
+export toast({ messages = [], live: how = "polite", onDismiss = null, dismissLabel = "Dismiss",
+               class: extra = "" }) =
+    style(tokens)
+    style(sheet)
+
+    val all = rows("Toast", "messages", messages, "id")
+    val manner = oneOf("Toast", "live", how, Manner)
+    val go = maybeFn("Toast", "onDismiss", onDismiss)
+    val word = text("Toast", "dismissLabel", dismissLabel)
+
+    val one = (m) -> <li key={string(m.id)} class={"m-toast " + toneOf(m)}>
+        <span>{string(m.text ?? "")}</span>
+        {if go == null then null else <button type="button" class="m-dismiss"
+                                              onClick={() -> go(m.id)}>{word}</button>}
+    </li>
+
+    val out = <Live live={manner} class={classes("Toast", "", extra)}>
+        <ul class="m-toasts">{all.map(one)}</ul>
+    </Live>
+
+    out
+
+// A message's tone, checked so that a misspelling is a sentence rather than a class nothing styles.
+toneOf(m: object) -> string
+    val tone = m.tone ?? "info"
+
+    oneOf("Toast", "messages, item's `tone`", tone, Tones)

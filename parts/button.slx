@@ -1,0 +1,46 @@
+// The one thing on the page that changes something.
+//
+// **`kind` DEFAULTS TO `"button"` AND NOT TO `"submit"`, WHICH IS THE OPPOSITE OF HTML'S DEFAULT AND
+// IS DELIBERATE.** A `<button>` inside a form with no `type` submits it, so a *"show more"* written
+// in the ordinary way posts the form the moment anybody presses it -- a defect that only appears once
+// somebody puts the component inside a form, which is usually much later. The submit button of a form
+// says `kind="submit"`, once, where the reader can see it.
+
+import { createElement, Fragment, style } from lath
+
+import tokens from "./tokens.css"
+import sheet from "./button.css"
+import { choice as oneOf, classes, flag, list, maybeFn, maybeText } from "./props.sl"
+
+export val Kinds = ["button", "submit", "reset"]
+export val Variants = ["primary", "quiet", "danger"]
+
+export button({ kind = "button", variant = "primary", disabled = false, onClick = null,
+                label = null, class: extra = "", children = [] }) =
+    style(tokens)
+    style(sheet)
+
+    val how = oneOf("Button", "kind", kind, Kinds)
+    val look = oneOf("Button", "variant", variant, Variants)
+    val off = flag("Button", "disabled", disabled)
+    val press = maybeFn("Button", "onClick", onClick)
+    val said = maybeText("Button", "label", label)
+    val kids = list("Button", "children", children)
+
+    // **`label` is for a button whose content is an icon**, and it is `aria-label` rather than a
+    // title: a title is a tooltip and a tooltip is not read out by anything a person navigating with
+    // a keyboard is using.
+    val out = <button class={classes("Button", "m-button " + look, extra)} type={how}
+                      disabled={off} aria-label={said} onClick={press}>{kids}</button>
+
+    out
+
+// The row a form's buttons stand in, so that the space above them is the library's answer.
+export actions({ class: extra = "", children = [] }) =
+    style(tokens)
+    style(sheet)
+
+    val kids = list("Actions", "children", children)
+    val out = <p class={classes("Actions", "m-do", extra)}>{kids}</p>
+
+    out

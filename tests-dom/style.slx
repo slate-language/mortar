@@ -1,0 +1,114 @@
+import { createElement, Fragment, mount, hydrate, html, flush, useState } from lath
+import { domHost } from lath/dom
+import { Avatar, Pagination, Toast } from "../mortar.slx"
+
+import { at, click, inHead, mutations, shown } from "./probe.slx"
+
+// WHERE A COMPONENT'S STYLESHEET GOES ON A REAL PAGE, AND WHAT A HYDRATED ONE WRITES.
+//
+// **The string host's answer is markup and cannot be compared against a document's.** A `<style>` in
+// the head is a mutation of a page, and whether it happened is the browser's answer and nobody
+// else's -- which is why this is a separate file from `tests/*.slx` rather than another assertion in
+// one.
+
+countOf(s: string, sub: string) -> integer =
+    var found = 0
+    var from = 0
+
+    while true
+        val found_at = indexOf(s[from..], sub)
+
+        if found_at == null then break
+
+        found = found + 1
+        from = from + found_at + sub.len()
+
+    found
+
+@test
+async A_COMPONENTS_SHEET_LANDS_IN_THE_DOCUMENTS_HEAD()
+    // **The head and not the container**, which is where a stylesheet belongs and is the DOM host's
+    // one departure from the string host's answer.
+    at("")
+    mount(<Avatar name="Ada"/>, domHost("#page"))
+
+    assertEq(countOf(inHead(), ".m-avatar"), 1)
+    assert(!contains(shown(), "<style"))
+
+@test
+async A_SECOND_MOUNT_OF_THE_SAME_COMPONENT_IS_NOT_A_SECOND_STYLE_ELEMENT()
+    at("")
+    mount(<Avatar name="Bob"/>, domHost("#page"))
+
+    assertEq(countOf(inHead(), ".m-avatar"), 1)
+
+@test
+async A_SHEET_A_LATER_RENDER_NEEDS_IS_INJECTED_ONCE_AND_ONLY_ONCE()
+    // **A page's stylesheets grow to the set of components it has rendered and stop there**, which is
+    // what makes `style` at the top of every render the right thing to write: a pager that only
+    // appears once there is a second page brings its rules with it, and brings them once.
+    //
+    // **The whole suite shares one document**, so the head fills up as it runs and a test here cannot
+    // start from an empty one -- which is exactly the situation a component rendered for the second
+    // time in a page's life has to survive, and is what this measures.
+    var setter = null
+
+    Later(props: object) =
+        val [more, setMore] = useState(false)
+
+        setter = setMore
+
+        <div>{if more then <Pagination page={1} total={0}/> else null}</div>
+
+    at("")
+
+    val before = countOf(inHead(), ".m-pager")
+
+    val root = mount(<Later/>, domHost("#page"))
+
+    assertEq(countOf(inHead(), ".m-pager"), before)
+
+    setter(true)
+    flush(root)
+
+    await sleep(1)
+
+    assertEq(countOf(inHead(), ".m-pager"), 1)
+
+@test
+async A_HYDRATED_PAGE_KEEPS_THE_SERVERS_SHEETS_AND_WRITES_NONE()
+    // **The server's `<style>` stands INSIDE the container**, in front of the fragment, and the page
+    // adopts the markup around it. A host that wrote the sheet again would be recorded, and a host
+    // that took the container's whole child list would throw the server's away.
+    val sheet = ".m-toast"
+    val el = <Toast messages={[{ id: 1, text: "hello" }]}/>
+    val sent = html(mount(el))
+
+    assert(startsWith(sent, "<style data-lath-style>"))
+
+    at(sent)
+
+    await sleep(1)
+
+    val before = mutations()
+    val inHeadBefore = countOf(inHead(), sheet)
+
+    hydrate(el, domHost("#page"))
+
+    await sleep(1)
+
+    assertEq(mutations() - before, 0)
+    assertEq(countOf(inHead(), sheet), inHeadBefore)
+    assert(contains(shown(), sheet))
+
+@test
+async THE_TOKENS_ARE_ONE_SHEET_HOWEVER_MANY_COMPONENTS_READ_THEM()
+    // **Deduplicated by the css itself**, which is what lets every component in the library register
+    // the tokens without a page carrying twenty copies of them.
+    at("")
+    mount(<Fragment><Avatar name="A"/><Pagination page={1} total={0}/><Toast messages={[]}/></Fragment>,
+          domHost("#page"))
+
+    // **`:root {` occurs once per copy of the tokens sheet**, where a declaration inside it occurs
+    // three times -- the light block, the explicit light override and the dark one.
+    assertEq(countOf(inHead(), ":root {"), 1)

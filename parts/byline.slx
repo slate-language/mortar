@@ -1,0 +1,63 @@
+// A moment, and who a thing belongs to.
+//
+// **NOTHING HERE ASKS WHAT TIME IT IS NOW, AND THAT IS A HYDRATION RULE RATHER THAN A STYLE.** A
+// server rendering *"4 minutes ago"* and a browser adopting the markup a second later would disagree
+// about the text, and a mismatch is a fault by design -- so the stamp is the row's own and the
+// arithmetic against the reader's clock is left to the application, which knows whether it wants to
+// pay for it. The stamp is UTC for the same reason: two hosts in two zones are two answers to one
+// question.
+
+import { createElement, Fragment, style } from lath
+import { epochSeconds } from slate:time
+
+import tokens from "./tokens.css"
+import sheet from "./byline.css"
+import { avatar as Avatar } from "./avatar.slx"
+import { choice, classes, maybeText, moment, text } from "./props.sl"
+
+// **A component is imported under a CAPITALISED name and that is the language's rule, not a
+// convention.** slx reads a lower-case tag as an HTML element, so `<avatar/>` would be a tag nothing
+// has ever heard of; the exported names here are lower case because `mortar.slx` is where the
+// capitals belong, and every composition inside this package renames on the way in.
+
+// How much of the stamp is written out. The whole of it is in `datetime` and in `title` either way,
+// which is what a reader hovering and a machine reading the page both get.
+export val Shows = ["date", "moment"]
+
+export timestamp({ at = 0, show = "date", class: extra = "" }) =
+    style(tokens)
+    style(sheet)
+
+    val when = moment("Timestamp", "at", at)
+    val how = choice("Timestamp", "show", show, Shows)
+    val stamp = string(epochSeconds(when))
+    val said = if how == "date" then stamp[0..<10] else stamp
+    val out = <time class={classes("Timestamp", "m-at", extra)} datetime={stamp} title={stamp}>{said}</time>
+
+    out
+
+val Timestamp = timestamp
+
+// The line above a post: a picture, a name, and when it was written.
+export byline({ name = "?", src = null, href = null, at = 0, size = "small", class: extra = "" }) =
+    style(tokens)
+    style(sheet)
+
+    val who = text("Byline", "name", name)
+    val to = maybeText("Byline", "href", href)
+    val when = moment("Byline", "at", at)
+
+    // **A name that is not a link is a `<span>` and not an `<a>` with nowhere to go**, which is what
+    // a keyboard walking the page cares about: a link with no destination is a stop for nothing.
+    val named = if to == null
+        <span class="m-who">{who}</span>
+    else
+        <a class="m-who" href={to}>{who}</a>
+
+    val out = <p class={classes("Byline", "m-byline", extra)}>
+        <Avatar name={who} src={src} size={size}/>
+        {named}
+        <Timestamp at={when} show="date"/>
+    </p>
+
+    out

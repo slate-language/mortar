@@ -1,0 +1,92 @@
+import { createElement, Fragment, mount, flush, useState } from lath
+import { domHost } from lath/dom
+import { Live, Toast } from "../mortar.slx"
+
+import { at, click, mutations, says, shown } from "./probe.slx"
+
+// The live region against a real document.
+//
+// **WHAT CANNOT BE ASKED OF A STRING IS WHETHER THE REGION WAS THERE FIRST.** A screen reader watches
+// regions it already knows about, so a `<div aria-live>` created at the same moment as the text
+// inside it announces nothing at all -- and the only way to say that a message ARRIVED IN an existing
+// region rather than arriving WITH one is to count what the document recorded.
+
+@test
+async A_MESSAGE_ARRIVES_INSIDE_A_REGION_THAT_WAS_ALREADY_THERE()
+    var setter = null
+
+    Feed(props: object) =
+        val [messages, setMessages] = useState([])
+
+        setter = setMessages
+
+        <Toast messages={messages}/>
+
+    at("")
+
+    val root = mount(<Feed/>, domHost("#page"))
+
+    // The empty region is on the page before anything has been said in it.
+    assert(contains(shown(), "aria-live=\"polite\""))
+    assert(contains(shown(), "<ul class=\"m-toasts\"></ul>"))
+
+    await sleep(1)
+
+    val before = mutations()
+
+    setter([{ id: 1, text: "a reply arrived" }])
+    flush(root)
+
+    await sleep(1)
+
+    // One record: the item inserted into the list that was already being watched.
+    assertEq(mutations() - before, 1)
+    assert(contains(shown(), "a reply arrived"))
+
+@test
+async A_SECOND_MESSAGE_INSERTS_ONE_ROW_AND_LEAVES_THE_FIRST_WHERE_IT_WAS()
+    // **Keyed by the message's own id**, which is what makes an arriving message insert one element
+    // rather than rewrite the list -- and what keeps a reader's place where it was.
+    var setter = null
+
+    Feed(props: object) =
+        val [messages, setMessages] = useState([{ id: 1, text: "one" }])
+
+        setter = setMessages
+
+        <Toast messages={messages}/>
+
+    at("")
+
+    val root = mount(<Feed/>, domHost("#page"))
+
+    await sleep(1)
+
+    val before = mutations()
+
+    setter([{ id: 1, text: "one" }, { id: 2, text: "two" }])
+    flush(root)
+
+    await sleep(1)
+
+    assertEq(mutations() - before, 1)
+    assert(contains(shown(), "one"))
+    assert(contains(shown(), "two"))
+
+@test
+async DISMISSING_A_MESSAGE_HANDS_BACK_ITS_ID()
+    var gone = 0
+
+    dismissed(id) =
+        gone = id
+
+        null
+
+    at("")
+    mount(<Toast messages={[{ id: 7, text: "x" }]} onDismiss={dismissed}/>, domHost("#page"))
+
+    click("button.m-dismiss")
+
+    await sleep(1)
+
+    assertEq(gone, 7)

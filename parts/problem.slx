@@ -1,0 +1,102 @@
+// An RFC 9457 problem document, rendered for a person.
+//
+// **A PROBLEM DOCUMENT IS THE RIGHT SHAPE FOR A MACHINE AND THE WRONG ONE FOR SOMEBODY LOOKING AT A
+// FORM.** `{ type, title, status, detail, instance }` is what an API answers, and a member called
+// `type` holding a URI is exactly what a reader does not want read out to them. So the mapping is
+// made once, here, rather than in every page that shows one:
+//
+// | member | what is shown |
+// |---|---|
+// | `detail` | the sentence, because it is the one written about *this* occurrence |
+// | `title` | the sentence where there is no `detail`, and the heading where there is |
+// | `status` | beside the title, small, for somebody reporting it |
+// | `type`, `instance` | nothing -- they are for a machine and for a log |
+//
+// **`errors` IS AN EXTENSION MEMBER AND EVERY API SPELLS IT DIFFERENTLY**, which is why the sentence
+// each row becomes is a prop. The default reads the two shapes that actually turn up: a row carrying
+// its own `detail`, and a row saying what was wanted against what arrived.
+
+import { createElement, Fragment, style } from lath
+
+import tokens from "./tokens.css"
+import sheet from "./problem.css"
+import { classes, count, list, maybeFn, maybeRecord, maybeText, said } from "./props.sl"
+
+// One row of `errors`, as a sentence.
+//
+// **`got: "nothing"` is a field that was not sent at all**, which is the ordinary case and reads
+// badly as *"got nothing"* -- so it gets a sentence of its own.
+export reasonOf(row) -> string
+    if row is string then return row
+
+    if !(row is object) then return said(row)
+
+    if (row.detail ?? null) != null then return string(row.detail)
+
+    val where = row.path ?? row.pointer ?? row.name ?? "the form"
+
+    // **A field that was not sent at all is missing whatever else the row says**, which is the
+    // ordinary case and reads badly as *"should be text and is nothing"*.
+    if (row.got ?? null) == "nothing" then return string(where) + " is missing"
+    if (row.wanted ?? null) == null then return string(where) + " is not right"
+
+    string(where) + " should be " + string(row.wanted) + " and is " + string(row.got ?? "nothing")
+
+export problem({ problem: doc = null, title = null, detail = null, status = null, errors = [],
+                 reason = null, class: extra = "" }) =
+    style(tokens)
+    style(sheet)
+
+    val whole = maybeRecord("Problem", "problem", doc)
+    val say = maybeFn("Problem", "reason", reason) ?? reasonOf
+
+    // **The flat props win over the document**, so a page that has a whole problem document and one
+    // sentence of its own -- *"that did not work"* from a submit that never reached the server --
+    // writes the sentence and keeps the rows.
+    val head = maybeText("Problem", "title", title) ?? textOf(whole, "title")
+    val body = maybeText("Problem", "detail", detail) ?? textOf(whole, "detail")
+    val code = numberOf("Problem", status, whole)
+    val rows = if len(list("Problem", "errors", errors)) > 0 then errors else listOf(whole)
+
+    // **Nothing at all where there is no problem**, which is what lets a page write `<Problem
+    // detail={note}/>` unconditionally and hold no branch of its own.
+    if head == null && body == null && len(rows) == 0 then return null
+
+    val sentence = body ?? head
+    val heading = if body == null || head == null then null else head
+    val one = (row) -> <li key={say(row)}>{say(row)}</li>
+
+    // **`role="alert"` here and `role="status"` in `EmptyState`**: this one interrupts, because it is
+    // about something the reader just tried to do and it is the answer to it.
+    val out = <div class={classes("Problem", "m-problem", extra)} role="alert">
+        {if heading == null then null else <p class="m-title">{heading}</p>}
+        <p>{sentence ?? ""}{if code == null then null else <span class="m-status">{code}</span>}</p>
+        {if len(rows) == 0 then null else <ul>{rows.map(one)}</ul>}
+    </div>
+
+    out
+
+// A member of the document, where there is a document and it is text.
+textOf(whole, name: string)
+    if whole == null then return null
+
+    val value = whole[name] ?? null
+
+    if value is string then value else null
+
+// The status, from the prop or from the document.
+numberOf(who: string, given, whole)
+    if given != null then return count(who, "status", given)
+    if whole == null then return null
+
+    val value = whole.status ?? null
+
+    if value is number then integer(value) else null
+
+// The rows, from the document, under either of the two names an API gives them.
+listOf(whole) -> array
+    if whole == null then return []
+
+    val rows = whole.errors ?? whole.mismatch ?? []
+
+    if rows is array then rows else []

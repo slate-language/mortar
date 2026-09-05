@@ -1,0 +1,47 @@
+// A form, and the hidden field every form that changes something carries.
+//
+// **A FORM HERE IS A REAL `<form method="post">` AND WORKS WITH NO SCRIPT ON THE PAGE**, which is the
+// whole arrangement this library is built for: the server answers a plain post with a redirect and
+// the next page, exactly as it did before anybody wrote a browser program. What hydration adds is a
+// submit handler, and where none was given the browser does what it was always going to do.
+//
+// **THE TOKEN TRAVELS IN A HIDDEN FIELD AND NOT IN A HEADER, AND THAT IS WHY IT IS A PROP HERE.** A
+// browser with no script running posts a form; it does not write headers. A library that left the
+// token to the application would be a library whose forms are safe only in the half of the cases
+// where somebody remembered.
+
+import { createElement, Fragment, style } from lath
+
+import tokens from "./tokens.css"
+import sheet from "./form.css"
+import { choice as oneOf, classes, list, maybeFn, maybeText, text } from "./props.sl"
+
+export val Methods = ["get", "post"]
+
+export form({ action = "", method = "post", enctype = null, csrf = null, csrfName = "_csrf",
+              onSubmit = null, label = null, class: extra = "", children = [] }) =
+    style(tokens)
+    style(sheet)
+
+    val to = text("Form", "action", action)
+    val how = oneOf("Form", "method", method, Methods)
+    val kind = maybeText("Form", "enctype", enctype)
+    val token = maybeText("Form", "csrf", csrf)
+    val called = text("Form", "csrfName", csrfName)
+    val name = maybeText("Form", "label", label)
+    val kids = list("Form", "children", children)
+
+    // **A `get` form carries no token and saying so is worth a sentence.** A double-submit token is
+    // about a request that changes something; putting one on a search box would put it in the
+    // address bar of every search anybody sent to anybody else.
+    if how == "get" && token != null
+        throw "Form's `csrf` belongs on a form that changes something, and this one's `method` is \"get\""
+
+    val out = <form class={classes("Form", "m-form", extra)} action={to} method={how}
+                    enctype={kind} aria-label={name}
+                    onSubmit={maybeFn("Form", "onSubmit", onSubmit)}>
+        {if token == null then null else <input type="hidden" name={called} value={token}/>}
+        {kids}
+    </form>
+
+    out

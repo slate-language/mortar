@@ -1,0 +1,142 @@
+import { createElement, Fragment, mount, html } from lath
+import { Card, CardList, Post, PostList, ThreadCard } from "../mortar.slx"
+
+import { countOf, fell, tree } from "./support.sl"
+
+// `Card`, `ThreadCard`, `Post` and the two lists they stand in.
+
+markup(el) -> string = tree(html(mount(el)))
+
+// -- Card ----------------------------------------------------------------------------------------
+
+@test
+A_CARD_IS_A_SURFACE_WITH_WHATEVER_IS_PUT_IN_IT()
+    val out = markup(<Card><p>anything</p></Card>)
+
+    assertEq(out, "<div class=\"m-card\"><p>anything</p></div>")
+
+@test
+A_CARDS_TITLE_IS_A_HEADING_AND_A_LINK_WHERE_THERE_IS_SOMEWHERE_TO_GO()
+    val plain = markup(<Card title="A thread"/>)
+
+    assertEq(plain, "<div class=\"m-card\"><h2 class=\"m-card-title\">A thread</h2></div>")
+
+    val linked = markup(<Card title="A thread" href="/threads/1"/>)
+
+    assert(contains(linked, "<h2 class=\"m-card-title\"><a href=\"/threads/1\">A thread</a></h2>"))
+
+@test
+THE_HEADING_LEVEL_IS_THE_PAGES_DECISION_AND_NOT_THE_LIBRARYS()
+    // **A card inside a page whose `h1` is the page title is an `h2`; the same card inside a section
+    // is an `h3`.** A library that fixed it would be deciding the document outline for a page it
+    // cannot see.
+    assert(contains(markup(<Card title="x" level="h3"/>), "<h3 class=\"m-card-title\">"))
+
+@test
+A_LEVEL_A_CARD_MAY_NOT_BE_NAMES_THE_PROP_AND_LISTS_THE_THREE()
+    // **`h1` is refused here and allowed on `Post`**, which is the distinction: a card is never what
+    // the page is about, and the post at the top of a thread is.
+    val said = fell(() -> markup(<Card title="x" level="h1"/>))
+
+    assert(contains(said, "Card's `level`"))
+    assert(contains(said, "\"h2\", \"h3\", \"h4\""))
+
+// -- ThreadCard ------------------------------------------------------------------------------------
+
+@test
+A_THREAD_CARD_IS_A_LIST_ITEM_WITH_EVERYTHING_A_ROW_KNOWS()
+    val out = markup(<ThreadCard title="Hydration" href="/threads/7" name="Ada" at={1756944000}
+                                 excerpt="two hosts, one markup" tags={["lath", "slate"]}
+                                 replies={3}/>)
+
+    assert(startsWith(out, "<li class=\"m-card m-thread-card\">"))
+    assert(contains(out, "<h2 class=\"m-card-title\"><a href=\"/threads/7\">Hydration</a></h2>"))
+    assert(contains(out, "class=\"m-byline\""))
+    assert(contains(out, "<p class=\"m-excerpt\">two hosts, one markup</p>"))
+    assert(contains(out, "<ul class=\"m-tags\">"))
+    assert(contains(out, "<p class=\"m-replies\">3 replies</p>"))
+
+@test
+ONE_REPLY_IS_ONE_REPLY_AND_NOT_ONE_REPLIES()
+    // **The run of text children is written as a run**, `{many} {word}`, which is exactly the shape
+    // that could not be hydrated before lath 0.5.1 -- a parser reads one text node back where the
+    // tree wrote three. `tests-dom/hydrate.slx` is where that is measured.
+    assert(contains(markup(<ThreadCard title="x" replies={1}/>), "<p class=\"m-replies\">1 reply</p>"))
+    assert(contains(markup(<ThreadCard title="x" replies={0}/>), "<p class=\"m-replies\">0 replies</p>"))
+
+@test
+A_THREAD_CARD_WITH_NO_EXCERPT_AND_NO_TAGS_RENDERS_NEITHER()
+    val out = markup(<ThreadCard title="x"/>)
+
+    assert(!contains(out, "m-excerpt"))
+    assert(!contains(out, "m-tags"))
+
+@test
+A_REPLY_COUNT_THAT_IS_NOT_A_NUMBER_NAMES_THE_PROP()
+    val said = fell(() -> markup(<ThreadCard title="x" replies="lots"/>))
+
+    assert(contains(said, "ThreadCard's `replies` is a whole number of things, and is \"lots\""))
+
+@test
+A_NEGATIVE_COUNT_IS_REFUSED_TOO()
+    assert(contains(fell(() -> markup(<ThreadCard title="x" replies={-1}/>)), "ThreadCard's `replies`"))
+
+// -- CardList ----------------------------------------------------------------------------------------
+
+@test
+A_CARD_LIST_IS_A_UL_AND_ITS_CARDS_ARE_ITS_ITEMS()
+    // **Which is why `ThreadCard` is an `<li>` and `Card` is a `<div>`.** A reader whose browser says
+    // *"list, 2 items"* knows how long the page is before walking it.
+    val out = markup(<CardList><ThreadCard key="a" title="a"/><ThreadCard key="b" title="b"/></CardList>)
+
+    assert(startsWith(out, "<ul class=\"m-cards\"><li class=\"m-card m-thread-card\">"))
+    assertEq(countOf(out, "<li class=\"m-card m-thread-card\">"), 2)
+
+// -- Post --------------------------------------------------------------------------------------------
+
+@test
+A_POST_IS_AN_ARTICLE_AND_ITS_BODY_IS_TEXT()
+    val out = markup(<Post title="Hydration" name="Ada" at={1756944000} body="line one
+line two"/>)
+
+    assert(startsWith(out, "<article class=\"m-post\">"))
+    assert(contains(out, "<h1>Hydration</h1>"))
+    assert(contains(out, "<div class=\"m-said\">line one\nline two</div>"))
+
+@test
+A_POST_BODY_IS_ESCAPED_AND_IS_NEVER_MARKUP()
+    // **The security decision this component makes.** A library that took markup here would be one
+    // whose ordinary use is an injection; what a post contains is what a person typed.
+    val out = markup(<Post body="<script>alert(1)</script>"/>)
+
+    assert(contains(out, "&lt;script&gt;alert(1)&lt;/script&gt;"))
+    assert(!contains(out, "<script>"))
+
+@test
+A_COMPACT_POST_IS_A_REPLY_AND_IS_A_LIST_ITEM()
+    val out = markup(<Post compact name="Ada" body="a reply"/>)
+
+    assert(startsWith(out, "<li class=\"m-reply\">"))
+    assert(!contains(out, "m-post"))
+
+@test
+A_POST_MAY_BE_THE_PAGES_H1_AND_A_CARD_MAY_NOT()
+    assert(contains(markup(<Post title="x" level="h1"/>), "<h1>x</h1>"))
+    assert(contains(fell(() -> markup(<Post title="x" level="h4"/>)), "Post's `level`"))
+
+@test
+A_POST_WITH_A_PHOTO_CARRIES_THE_TITLE_AS_ITS_ALT()
+    val out = markup(<Post title="A cat" photo="/uploads/c.png" alt="A cat"/>)
+
+    assert(contains(out, "<img src=\"/uploads/c.png\" alt=\"A cat\" loading=\"lazy\">"))
+
+@test
+A_BODY_THAT_IS_NOT_TEXT_NAMES_THE_PROP()
+    assert(contains(fell(() -> markup(<Post body={["a"]}/>)), "Post's `body` is text"))
+
+@test
+A_POST_LIST_IS_A_UL_OF_REPLIES()
+    val out = markup(<PostList><Post key="1" compact body="one"/><Post key="2" compact body="two"/></PostList>)
+
+    assert(startsWith(out, "<ul class=\"m-posts\">"))
+    assertEq(countOf(out, "<li class=\"m-reply\">"), 2)

@@ -1,0 +1,17 @@
+/* Text that is there for a screen reader and for nothing else.
+ *
+ * **`clip-path` and not `display: none`.** A hidden element is not announced at all, and the whole
+ * point of this one is to be announced -- so it stays in the layout at one pixel, out of the way.
+ */
+
+.m-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}

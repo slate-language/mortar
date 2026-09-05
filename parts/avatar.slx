@@ -1,0 +1,40 @@
+// Somebody's picture, or the first letter of their name where they have none.
+//
+// **The fallback is not a placeholder image**, and that is the decision here: a grey silhouette says
+// nothing, where a letter tells two people apart in a list of forty. It is the same box either way,
+// so a list does not reflow as pictures arrive.
+
+import { createElement, Fragment, style } from lath
+
+import tokens from "./tokens.css"
+import sheet from "./avatar.css"
+import { choice, classes, maybeText, text } from "./props.sl"
+
+// The sizes, in one place so that the message listing them cannot drift from the check.
+export val Sizes = ["small", "medium", "large"]
+
+export avatar({ name = "?", src = null, size = "small", class: extra = "" }) =
+    style(tokens)
+    style(sheet)
+
+    val who = text("Avatar", "name", name)
+    val file = maybeText("Avatar", "src", src)
+    val how = choice("Avatar", "size", size, Sizes)
+    val cls = classes("Avatar", "m-avatar " + how, extra)
+
+    // **`aria-hidden` on the letter and an `alt` on the picture**, which is the pair that makes this
+    // read correctly either way: the letter is decoration beside a name that is already written out,
+    // and a picture standing in for a person is that person's name.
+    val out = if file == null
+        <span class={cls} aria-hidden="true">{initial(who)}</span>
+    else
+        <img class={cls} src={file} alt={who} loading="lazy"/>
+
+    out
+
+// The first character of a name, or a question mark where there is no name to take one from.
+//
+// **`upper` of the first character and not of the whole string**, a name being somebody's own
+// spelling of it everywhere except in this one circle.
+initial(who: string) -> string =
+    if len(who) == 0 then "?" else upper(who[0..<1])

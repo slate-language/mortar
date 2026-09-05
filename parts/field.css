@@ -1,0 +1,42 @@
+/* One labelled control, with whatever is wrong with it underneath. */
+
+.m-field {
+    display: flex;
+    flex-direction: column;
+    gap: .3rem;
+    margin: 0 0 .9rem;
+
+    & label {
+        font-size: .85rem;
+        color: var(--m-ink-soft);
+        font-weight: 550;
+    }
+
+    & input, & textarea, & select {
+        font: inherit;
+        color: inherit;
+        background: var(--m-paper);
+        border: 1px solid var(--m-line);
+        border-radius: 8px;
+        padding: .5rem .65rem;
+        width: 100%;
+        resize: vertical;
+
+        &:focus-visible {
+            outline: 2px solid var(--m-accent);
+            outline-offset: 1px;
+            border-color: var(--m-accent);
+        }
+
+        &[aria-invalid="true"] { border-color: var(--m-danger); }
+    }
+
+    & input[type="file"] {
+        padding: .4rem;
+        background: none;
+        border-style: dashed;
+    }
+
+    & .m-hint { font-size: .8rem; color: var(--m-ink-faint); }
+    & .m-error { font-size: .8rem; color: var(--m-danger); }
+}

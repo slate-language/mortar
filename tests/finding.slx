@@ -1,0 +1,168 @@
+import { createElement, Fragment, mount, html } from lath
+import { Pagination, Segmented, SortControls, Tag, TagList } from "../mortar.slx"
+
+import { countOf, fell, tree } from "./support.sl"
+
+// The four controls a list of anything is filtered, sorted and paged with.
+//
+// **EVERY ONE OF THEM RENDERS A REAL `<a href>`**, which is the claim this file exists to pin: the
+// sort, the tag and the page numbers all work on a page whose script never ran, and a cmd-click opens
+// the filtered list in a tab. `tests-dom/choice.slx` is where the other half is measured -- the click
+// a hydrated page takes instead.
+
+markup(el) -> string = tree(html(mount(el)))
+
+// -- Tag ---------------------------------------------------------------------------------------------
+
+@test
+A_TAG_WITH_NO_HREF_IS_A_SPAN()
+    assertEq(markup(<Tag label="slate"/>), "<span class=\"m-tag m-off\">slate</span>")
+
+@test
+A_TAG_WITH_AN_HREF_IS_A_LINK()
+    assertEq(markup(<Tag label="slate" href="/?tag=slate"/>),
+             "<a class=\"m-tag\" href=\"/?tag=slate\">slate</a>")
+
+@test
+A_TAGS_COUNT_IS_INSIDE_THE_LINK_AND_NOT_BESIDE_IT()
+    // **So the whole pill is one target** and the number cannot be clicked past.
+    val out = markup(<Tag label="slate" href="/x" count={12}/>)
+
+    assertEq(out, "<a class=\"m-tag\" href=\"/x\">slate<span class=\"m-count\">12</span></a>")
+
+@test
+THE_TAG_IN_FORCE_SAYS_SO_WITH_ARIA_CURRENT()
+    assert(contains(markup(<Tag label="slate" href="/x" current/>), "aria-current=\"true\""))
+    assert(!contains(markup(<Tag label="slate" href="/x"/>), "aria-current"))
+
+@test
+A_CURRENT_THAT_IS_NOT_A_BOOLEAN_NAMES_THE_PROP()
+    // **`0` is true in slate and false in JavaScript**, so a prop taken as truthy would read
+    // differently depending on which back end rendered the page. It is a boolean or it is a mistake.
+    assert(contains(fell(() -> markup(<Tag label="x" current={1}/>)), "`current` is true or false"))
+
+// -- TagList -------------------------------------------------------------------------------------------
+
+@test
+A_TAG_LIST_TAKES_WORDS_OR_RECORDS()
+    val words = markup(<TagList tags={["a", "b"]}/>)
+
+    assertEq(countOf(words, "<li>"), 2)
+
+    val rows = markup(<TagList tags={[{ label: "a", count: 2 }]}/>)
+
+    assert(contains(rows, "<span class=\"m-count\">2</span>"))
+
+@test
+A_TAG_LISTS_HREF_IS_A_FUNCTION_OF_THE_LABEL()
+    // **The component knows the label and the application knows what a label means as an address.**
+    // A library that guessed would be wrong for everybody.
+    val out = markup(<TagList tags={["slate"]} href={(t) -> "/topics/" + t}/>)
+
+    assert(contains(out, "href=\"/topics/slate\""))
+
+@test
+AN_EMPTY_TAG_LIST_IS_NOTHING_AT_ALL()
+    // **Rather than an empty `<ul>`**, which is announced as a list of nothing and is a thing a
+    // reader has to listen past.
+    assertEq(markup(<TagList tags={[]}/>), "")
+
+@test
+THE_TAG_BEING_FILTERED_BY_IS_MARKED()
+    val out = markup(<TagList tags={["a", "b"]} href={(t) -> "/?tag=" + t} current="b"/>)
+
+    assertEq(countOf(out, "aria-current=\"true\""), 1)
+    assert(contains(out, "href=\"/?tag=b\" aria-current=\"true\""))
+
+@test
+A_TAG_ROW_WITH_NO_LABEL_NAMES_THE_PROP()
+    val said = fell(() -> markup(<TagList tags={[{ name: "a" }]}/>))
+
+    assert(contains(said, "TagList's `tags` are labels or records carrying a `label`"))
+
+@test
+TAGS_THAT_ARE_NOT_A_LIST_NAME_THE_PROP()
+    assert(contains(fell(() -> markup(<TagList tags="slate"/>)), "TagList's `tags` is a list"))
+
+// -- Segmented -----------------------------------------------------------------------------------------
+
+@test
+A_SEGMENTED_CONTROL_IS_A_LIST_OF_LINKS()
+    // **And not a set of buttons**, which is the decision the component is made of: a sort order is
+    // part of the address, so it can be bookmarked, sent to somebody else and pressed back out of.
+    val out = markup(<Segmented options={["newest", "busiest"]} value="newest"
+                                href={(v) -> "/?sort=" + v}/>)
+
+    assert(startsWith(out, "<ul class=\"m-segmented\">"))
+    assertEq(countOf(out, "<a class=\"m-seg\""), 2)
+    assertEq(countOf(out, "aria-current=\"true\""), 1)
+
+@test
+AN_OPTION_MAY_CARRY_A_LABEL_OF_ITS_OWN()
+    val out = markup(<Segmented options={[{ value: "busiest", label: "most replies" }]}
+                                href={(v) -> "/?sort=" + v}/>)
+
+    assert(contains(out, "href=\"/?sort=busiest\">most replies</a>"))
+
+@test
+A_NAMED_GROUP_IS_A_LANDMARK_AND_AN_UNNAMED_ONE_IS_NOT()
+    // **An unnamed landmark is worse than none**: a reader listing the page's regions is handed
+    // *"navigation"* with nothing to tell it from the header's.
+    assert(!contains(markup(<Segmented options={["a"]}/>), "<nav"))
+    assert(contains(markup(<Segmented options={["a"]} label="Sort"/>), "<nav aria-label=\"Sort\">"))
+
+@test
+AN_OPTION_THAT_IS_NEITHER_A_WORD_NOR_A_RECORD_NAMES_THE_PROP()
+    assert(contains(fell(() -> markup(<Segmented options={[7]}/>)), "Segmented's `options`"))
+
+@test
+SORT_CONTROLS_ARE_A_SEGMENTED_CONTROL_WITH_ITS_LABEL_WRITTEN_IN()
+    val out = markup(<SortControls options={["newest"]} sort="newest" href={(v) -> "/?sort=" + v}/>)
+
+    assert(contains(out, "<nav aria-label=\"Sort\">"))
+    assert(contains(out, "m-segmented m-sorts"))
+
+// -- Pagination ------------------------------------------------------------------------------------------
+
+@test
+A_PAGER_SAYS_WHERE_IT_IS_AND_HOW_MANY_THERE_ARE()
+    // **A total is what makes this different from a next button**: a person who wants the fourth page
+    // can ask for it, and the number of pages is on the screen.
+    val out = markup(<Pagination page={2} size={20} total={45} href={(n) -> "/?page=" + string(n)}
+                                 unit="threads"/>)
+
+    assert(contains(out, "page 2 of 3"))
+    assert(contains(out, "<span class=\"m-total\">45 threads</span>"))
+    assert(contains(out, "href=\"/?page=1\""))
+    assert(contains(out, "href=\"/?page=3\""))
+
+@test
+A_STEP_WITH_NOWHERE_TO_GO_IS_A_SPAN_AND_NOT_A_DISABLED_LINK()
+    // **There is no such thing as a disabled anchor**: a keyboard still stops on one, and
+    // `aria-disabled` on a link that still navigates is a lie the browser does not read.
+    val first = markup(<Pagination page={1} size={20} total={45} href={(n) -> "/?page=" + string(n)}/>)
+
+    assert(contains(first, "<span class=\"m-step m-off\">previous</span>"))
+    assert(contains(first, "<a class=\"m-step\" href=\"/?page=2\">next</a>"))
+
+    val last = markup(<Pagination page={3} size={20} total={45} href={(n) -> "/?page=" + string(n)}/>)
+
+    assert(contains(last, "<span class=\"m-step m-off\">next</span>"))
+
+@test
+AN_EMPTY_LIST_IS_ONE_PAGE_AND_NOT_ZERO()
+    assert(contains(markup(<Pagination page={1} total={0}/>), "page 1 of 1"))
+
+@test
+A_PAGE_SIZE_OF_ZERO_IS_REFUSED_RATHER_THAN_DIVIDED_BY()
+    assert(contains(fell(() -> markup(<Pagination size={0}/>)), "Pagination's `size`"))
+
+@test
+A_TOTAL_THAT_IS_NOT_A_NUMBER_NAMES_THE_PROP()
+    assert(contains(fell(() -> markup(<Pagination total="40"/>)), "Pagination's `total` is a whole number"))
+
+@test
+AN_HREF_THAT_IS_NOT_A_FUNCTION_NAMES_THE_PROP()
+    // **A function and not a string**, which is what every navigational prop in this library takes:
+    // the component knows the page number and the application knows what a page number means.
+    assert(contains(fell(() -> markup(<Pagination href="/?page="/>)), "Pagination's `href` is a function"))

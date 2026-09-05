@@ -1,0 +1,31 @@
+// What a list says when there is nothing in it.
+//
+// **AN EMPTY LIST IS A STATE AND NOT AN ABSENCE**, which is the whole reason this is a component:
+// rendering nothing leaves a reader looking at a page that could equally be broken, still loading,
+// or filtered down to nothing. What this says is which of those it is, and -- where the caller gives
+// it children -- what to do about it.
+
+import { createElement, Fragment, style } from lath
+
+import tokens from "./tokens.css"
+import sheet from "./empty.css"
+import { classes, list, maybeText, text } from "./props.sl"
+
+export emptyState({ title = "Nothing here", detail = null, class: extra = "", children = [] }) =
+    style(tokens)
+    style(sheet)
+
+    val head = text("EmptyState", "title", title)
+    val said = maybeText("EmptyState", "detail", detail)
+    val kids = list("EmptyState", "children", children)
+
+    // **`role="status"` and not `role="alert"`.** A list that came back empty is worth saying once,
+    // politely, after whatever the reader was doing; an alert interrupts, and nothing here is
+    // urgent.
+    val out = <div class={classes("EmptyState", "m-empty", extra)} role="status">
+        <h2>{head}</h2>
+        {if said == null then null else <p>{said}</p>}
+        {if len(kids) == 0 then null else <p class="m-do">{kids}</p>}
+    </div>
+
+    out

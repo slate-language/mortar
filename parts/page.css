@@ -1,0 +1,66 @@
+/* The frame every page is inside: a header, the content, a footer. */
+
+.m-shell {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.m-head {
+    display: flex;
+    align-items: center;
+    gap: var(--m-gap);
+    flex-wrap: wrap;
+    padding: .75rem max(1rem, calc((100% - var(--m-measure)) / 2));
+    background: var(--m-raised);
+    border-bottom: 1px solid var(--m-line);
+    position: sticky;
+    top: 0;
+    z-index: 5;
+
+    & .m-brand {
+        font-weight: 650;
+        font-size: 1.05rem;
+        color: var(--m-ink);
+        text-decoration: none;
+        letter-spacing: -0.02em;
+    }
+
+    & .m-me {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        margin-left: auto;
+        flex-wrap: wrap;
+    }
+}
+
+.m-main {
+    width: min(100% - 2rem, var(--m-measure));
+    margin: 2rem auto;
+    flex: 1;
+}
+
+.m-foot {
+    border-top: 1px solid var(--m-line);
+    padding: 1.5rem;
+    text-align: center;
+    color: var(--m-ink-faint);
+    font-size: .85rem;
+}
+
+/* **A skip link is invisible until it has the caret**, which is the whole of what it is for: the
+ * first thing a keyboard meets on the page, and a way past thirty links in a header. */
+.m-skip {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    z-index: 30;
+    background: var(--m-accent);
+    color: var(--m-accent-ink);
+    padding: .5rem .9rem;
+    border-radius: 0 0 var(--m-radius) 0;
+    text-decoration: none;
+
+    &:focus-visible { left: 0; }
+}

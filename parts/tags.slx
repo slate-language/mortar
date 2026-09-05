@@ -1,0 +1,84 @@
+// A label on a thing, and the list of them.
+//
+// **A TAG TAKES ITS DESTINATION AS A FUNCTION AND NOT AS A STRING**, which is the shape every
+// navigational prop in this library has: the component knows the label and the application knows
+// what a label means as an address -- `"/?tag=" + label` on one board and `"/topics/" + label` on
+// another -- and a library that guessed would be wrong for everybody. With no `href` a tag is a
+// `<span>`, which is what a tag that is only a label should be.
+
+import { createElement, Fragment, style } from lath
+
+import tokens from "./tokens.css"
+import sheet from "./tags.css"
+import { choice as Choice } from "./link.slx"
+import { classes, count, flag, list, maybeFn, maybeText, said, text } from "./props.sl"
+
+// One label.
+export tag({ label = "", href = null, count: howMany = null, current = false, onChoose = null,
+             class: extra = "" }) =
+    style(tokens)
+    style(sheet)
+
+    val name = text("Tag", "label", label)
+    val to = maybeText("Tag", "href", href)
+    val on = flag("Tag", "current", current)
+    val many = if howMany == null then null else count("Tag", "count", howMany)
+
+    // **The count is a child of the anchor rather than a sibling**, so the whole pill is one target
+    // and the number cannot be clicked past.
+    val inside = if many == null
+        [name]
+    else
+        [name, <span class="m-count">{string(many)}</span>]
+
+    val out = <Choice href={to} value={name} class={classes("Tag", "m-tag", extra)} current={on}
+                      mark="true" onChoose={maybeFn("Tag", "onChoose", onChoose)}>{inside}</Choice>
+
+    out
+
+val Tag = tag
+
+// The tags of one thing, or the tags a whole board has as a filter.
+//
+// `tags` takes either shape: a list of strings, which is what a row's own tags are, or a list of
+// records carrying a `label` and whatever else the application knows -- a `count`, usually. `href`
+// is handed the label. `current` is the one being filtered by, where there is one.
+export tagList({ tags = [], href = null, current = null, onChoose = null, class: extra = "" }) =
+    style(tokens)
+    style(sheet)
+
+    val all = list("TagList", "tags", tags)
+    val to = maybeFn("TagList", "href", href)
+    val on = maybeText("TagList", "current", current)
+    val chose = maybeFn("TagList", "onChoose", onChoose)
+
+    // **Nothing at all where there are no tags**, rather than an empty `<ul>`: a list element with no
+    // items is announced as a list of nothing, which is a thing a reader has to listen past.
+    if len(all) == 0 then return null
+
+    // **Each tag is inside an `<li>` and the `<li>` is what carries the key.** A `<ul>` may hold
+    // nothing but list items, and a library that put anchors straight into one would be shipping
+    // invalid markup to every application that used it.
+    val one = (row) -> <li key={labelOf(row)}>
+        <Tag label={labelOf(row)} count={countOf(row)}
+             href={if to == null then null else to(labelOf(row))}
+             current={on != null && on == labelOf(row)} onChoose={chose}/>
+    </li>
+    val out = <ul class={classes("TagList", "m-tags", extra)}>{all.map(one)}</ul>
+
+    out
+
+// The label of a row, whichever of the two shapes it is.
+labelOf(row) -> string
+    if row is string then return row
+
+    if !(row is object) || !((row.label ?? null) is string)
+        throw "TagList's `tags` are labels or records carrying a `label`, and one of them is " + said(row)
+
+    row.label
+
+// The count beside a label, where the row carries one.
+countOf(row)
+    if row is string then return null
+
+    row.count ?? null

@@ -1,0 +1,74 @@
+// One page, rendered to markup.
+//
+//     slate examples/page.slx
+//
+// **THIS FILE IS BYTE FOR BYTE THE SAME IN THE OTHER LIBRARY'S REPOSITORY EXCEPT FOR ONE IMPORT**,
+// which is the whole claim the two exist to make. Run it in both and diff the two outputs: what
+// differs is the appearance, and what does not is what the application was right to hand over -- the
+// landmarks, the roles, the wiring between a label and its control, the real anchor behind every
+// filter, and the `<li>` a thread in a list is.
+//
+// **A program that INSTALLED the package writes `from mortar` rather than the relative path below.**
+// This one is inside the repository, where the package's own name is not something to resolve.
+
+import { createElement, Fragment, mount, html } from lath
+import { addressIs } from lath/router
+import { Actions, Avatar, Button, CardList, Field, Form, Page, Pagination, Post, PostList, Problem,
+         SortControls, TagList, Theme, ThreadCard, Toast } from "../mortar.slx"
+
+val threads = [{ id: 1, title: "Hydration, and the two rules that make it true", replies: 4,
+                 name: "ada", at: 1756944000, tags: ["lath", "hydration"],
+                 excerpt: "Two text children in a row are one text child." },
+               { id: 2, title: "A component library with no build step", replies: 1,
+                 name: "bob", at: 1756857600, tags: ["css"],
+                 excerpt: "Native nesting, custom properties, and nothing to configure." }]
+
+tagged(t: string) -> string = "/?tag=" + t
+sorted(v: string) -> string = "/?sort=" + v
+paged(n: integer) -> string = "/?page=" + string(n)
+
+Board(props: object) =
+    val row = (t) -> <ThreadCard key={t.id} title={t.title} href={"/threads/" + string(t.id)}
+                                 name={t.name} authorHref={"/people/" + t.name} at={t.at}
+                                 excerpt={t.excerpt} tags={t.tags} tagHref={tagged}
+                                 replies={t.replies}/>
+    val search = <Form action="/" method="get" label="Search">
+        <Field name="q" kind="search" label="Search threads" placeholder="Search threads"/>
+    </Form>
+    val nav = <Fragment>
+        <Avatar name="ada" src="/uploads/ada.png"/>
+        <Form action="/signout" csrf="a-token">
+            <Button kind="submit" variant="quiet">Sign out</Button>
+        </Form>
+    </Fragment>
+
+    val out = <Theme>
+        <Page brand="the board" search={search} nav={nav}
+              footer={<p>slate, end to end.</p>}>
+            <SortControls options={["newest", { value: "busiest", label: "most replies" }]}
+                          sort="newest" href={sorted}/>
+            <TagList tags={[{ label: "lath", count: 12 }, { label: "css", count: 3 }]}
+                     href={tagged} current="lath"/>
+            <CardList>{threads.map(row)}</CardList>
+            <Pagination page={1} size={20} total={45} href={paged} unit="threads"/>
+            <Post title="Hydration, and the two rules that make it true" name="ada" at={1756944000}
+                  authorHref="/people/ada" tags={["lath"]} tagHref={tagged}
+                  body="A parser reads one text node back where the tree wrote three."/>
+            <PostList>
+                <Post key="1" compact name="bob" at={1756944600} body="That explains the mismatch."/>
+            </PostList>
+            <Problem detail="That reply could not be posted."
+                     errors={[{ path: "body", got: "nothing" }]}/>
+            <Form action="/threads" csrf="a-token">
+                <Field name="title" label="Title" required placeholder="What is this about?"/>
+                <Actions><Button kind="submit">Post it</Button></Actions>
+            </Form>
+            <Toast messages={[{ id: 1, text: "a reply arrived" }]}/>
+        </Page>
+    </Theme>
+
+    out
+
+addressIs("/?theme=dark")
+
+print(html(mount(<Board/>)))

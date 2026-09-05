@@ -1,0 +1,177 @@
+// One labelled control, with whatever the server said was wrong with it underneath.
+//
+// **THE LABEL, THE ERROR AND THE HINT ARE WIRED TOGETHER AND THAT IS THE WHOLE REASON THIS IS A
+// COMPONENT.** `for`/`id` between the label and the control, `aria-describedby` from the control to
+// the hint and the error, `aria-invalid` when there is one -- four attributes that are easy to write
+// and easier to forget, and a form is where forgetting them costs the most. Written once here, they
+// are right on every field in every application.
+//
+// **A `value` of `null` LEAVES THE ATTRIBUTE OFF**, which is what makes the field uncontrolled: the
+// browser keeps what was typed, the component does not write it back on every render, and the value
+// is read at submit. Give a `value` and the field is controlled, which is what a server-rendered
+// form redisplaying a rejected submission wants.
+
+import { createElement, Fragment, style } from lath
+
+import tokens from "./tokens.css"
+import sheet from "./field.css"
+import { classes, count, flag, maybeFn, maybeText, text } from "./props.sl"
+
+// The ids a control points at, and the elements they name.
+//
+// **`aria-describedby` takes a list**, so a field with both a hint and an error names both -- and a
+// field with neither has no attribute at all rather than one naming an element that is not there.
+describedBy(id: string, hint, error) =
+    if hint != null && error != null then return id + "-error " + id + "-hint"
+    if error != null then return id + "-error"
+    if hint != null then return id + "-hint"
+
+    null
+
+// The two lines under a control.
+notes(id: string, hint, error) -> array =
+    [if error == null then null else <span class="m-error" id={id + "-error"}>{error}</span>,
+     if hint == null then null else <span class="m-hint" id={id + "-hint"}>{hint}</span>]
+
+// A field's own id, which is what the label points at.
+idOf(who: string, given, name: string) -> string
+    val own = maybeText(who, "id", given)
+
+    if own != null then return own
+
+    "f-" + name
+
+export field({ name = "", label = null, kind = "text", value = null, error = null, hint = null,
+               required = false, placeholder = null, autocomplete = null, id = null,
+               onInput = null, class: extra = "" }) =
+    style(tokens)
+    style(sheet)
+
+    val called = text("Field", "name", name)
+    val how = text("Field", "kind", kind)
+
+    // **A file input is a different component and the message says so**, rather than rendering one
+    // that quietly ignores `value` -- a browser refusing to be told which file is in an input.
+    if how == "file"
+        throw "Field's `kind` is not \"file\": a file is `FileInput`, which has an accept and a size"
+
+    val own = idOf("Field", id, called)
+    val said = maybeText("Field", "label", label) ?? called
+    val wrong = maybeText("Field", "error", error)
+    val note = maybeText("Field", "hint", hint)
+    val out = <p class={classes("Field", "m-field", extra)}>
+        <label for={own}>{said}</label>
+        <input id={own} name={called} type={how}
+               required={flag("Field", "required", required)}
+               placeholder={maybeText("Field", "placeholder", placeholder)}
+               autocomplete={maybeText("Field", "autocomplete", autocomplete)}
+               aria-invalid={if wrong == null then null else "true"}
+               aria-describedby={describedBy(own, note, wrong)}
+               onInput={maybeFn("Field", "onInput", onInput)}
+               {...(if value == null then {} else { value: text("Field", "value", value) })}/>
+        {notes(own, note, wrong)}
+    </p>
+
+    out
+
+// The same, with room to write in.
+//
+// **A TEXTAREA'S TEXT IS ITS *DEFAULT* VALUE AND NOT ITS VALUE**, which is HTML's own rule and the
+// one thing about this component that surprises people: rewriting the child of a textarea somebody
+// is typing in changes nothing they can see, and is a mutation for nothing. So this is uncontrolled
+// by construction -- the text is what it started as, and what is in it is read at submit.
+export textArea({ name = "", label = null, value = "", rows = 5, error = null, hint = null,
+                  required = false, placeholder = null, id = null, onInput = null,
+                  class: extra = "" }) =
+    style(tokens)
+    style(sheet)
+
+    val called = text("TextArea", "name", name)
+    val own = idOf("TextArea", id, called)
+    val said = maybeText("TextArea", "label", label) ?? called
+    val wrong = maybeText("TextArea", "error", error)
+    val note = maybeText("TextArea", "hint", hint)
+    val lines = count("TextArea", "rows", rows)
+    val out = <p class={classes("TextArea", "m-field", extra)}>
+        <label for={own}>{said}</label>
+        <textarea id={own} name={called} rows={lines}
+                  required={flag("TextArea", "required", required)}
+                  placeholder={maybeText("TextArea", "placeholder", placeholder)}
+                  aria-invalid={if wrong == null then null else "true"}
+                  aria-describedby={describedBy(own, note, wrong)}
+                  onInput={maybeFn("TextArea", "onInput", onInput)}>{text("TextArea", "value", value)}</textarea>
+        {notes(own, note, wrong)}
+    </p>
+
+    out
+
+// A file, with what will be taken and how big it may be written where somebody can read it.
+//
+// **THE HINT IS BUILT FROM `accept` AND `maxSize` RATHER THAN WRITTEN OUT AGAIN.** An `accept` a
+// browser enforces and a sentence a person reads are the same fact, and a library that took both as
+// props would ship applications where the two disagree -- the file picker offering what the sentence
+// says it will not take.
+export fileInput({ name = "", label = null, accept = null, maxSize = null, error = null, hint = null,
+                   required = false, id = null, onInput = null, class: extra = "" }) =
+    style(tokens)
+    style(sheet)
+
+    val called = text("FileInput", "name", name)
+    val own = idOf("FileInput", id, called)
+    val said = maybeText("FileInput", "label", label) ?? called
+    val wrong = maybeText("FileInput", "error", error)
+    val takes = maybeText("FileInput", "accept", accept)
+    val most = if maxSize == null then null else count("FileInput", "maxSize", maxSize)
+    val note = maybeText("FileInput", "hint", hint) ?? saying(takes, most)
+    val out = <p class={classes("FileInput", "m-field", extra)}>
+        <label for={own}>{said}</label>
+        <input id={own} name={called} type="file" accept={takes}
+               required={flag("FileInput", "required", required)}
+               aria-invalid={if wrong == null then null else "true"}
+               aria-describedby={describedBy(own, note, wrong)}
+               onInput={maybeFn("FileInput", "onInput", onInput)}/>
+        {notes(own, note, wrong)}
+    </p>
+
+    out
+
+// What a file input will take, as a sentence, or nothing where it will take anything.
+saying(accept, most)
+    val kinds = kindsOf(accept)
+    val size = sizeOf(most)
+
+    if kinds == null && size == null then return null
+    if kinds == null then return "Up to " + size
+    if size == null then return kinds
+
+    kinds + ", up to " + size
+
+// The `accept` list as words. **A media range is turned into a plural noun and everything else is
+// read as extensions**, which are the two things an `accept` is ever actually written as.
+kindsOf(accept)
+    if accept == null then return null
+    if accept == "image/*" then return "Images"
+    if accept == "video/*" then return "Video"
+    if accept == "audio/*" then return "Audio"
+
+    var words = ""
+
+    for one in accept.split(",")
+        val trimmed = trim(one)
+        val word = if startsWith(trimmed, ".") then upper(trimmed[1..]) else upper(trimmed)
+
+        words = if words == "" then word else words + ", " + word
+
+    if words == "" then null else words
+
+// A count of bytes as a person would write it.
+//
+// **Powers of 1024 with the units a file manager uses**, which is what somebody comparing this
+// against what their own machine says about the file is holding.
+sizeOf(bytes)
+    if bytes == null then return null
+    if bytes < 1024 then return string(bytes) + " bytes"
+    if bytes < 1048576 then return string(bytes / 1024) + " KB"
+    if bytes < 1073741824 then return string(bytes / 1048576) + " MB"
+
+    string(bytes / 1073741824) + " GB"

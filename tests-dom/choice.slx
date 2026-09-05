@@ -1,0 +1,144 @@
+import { createElement, Fragment, mount, flush } from lath
+import { domHost } from lath/dom
+import { Pagination, Segmented, Tag, TagList } from "../mortar.slx"
+
+import { at, click, navigations, prevented, shown } from "./probe.slx"
+
+// THE CLICK A HYDRATED PAGE TAKES, AND THE FOUR IT LEAVES TO THE BROWSER.
+//
+// **This is the half `slate test tests` cannot reach**, and for a sharper reason than the host's:
+// what decides whether a click belongs to the page or to the browser is read off `mods` and
+// `button`, which the browser puts on the event and nothing else can produce.
+//
+// **A refusal is measured two ways and both are needed.** `prevented()` says the component did not
+// call `preventDefault`, which is what leaving a click alone means; `navigations()` says the browser
+// then went and tried to follow it, which is what says the anchor was a working anchor rather than a
+// dead one. A control that swallowed a modified click would fail the first; one whose links did not
+// work at all would pass the first and fail the second.
+
+// The page emptied and something mounted into it.
+fresh(el) =
+    at("")
+
+    mount(el, domHost("#page"))
+
+@test
+async A_PLAIN_CLICK_ON_A_TAG_IS_THE_PAGES()
+    var chosen = ""
+
+    took(value) =
+        chosen = value
+
+        null
+
+    fresh(<TagList tags={["slate", "lath"]} href={(t) -> "/?tag=" + t} onChoose={took}/>)
+
+    val followed = navigations()
+
+    click("a[href=\"/?tag=lath\"]")
+
+    await sleep(1)
+
+    assertEq(chosen, "lath")
+    assert(prevented())
+    assertEq(navigations() - followed, 0)
+
+@test
+async A_MODIFIED_CLICK_AND_A_MIDDLE_CLICK_BELONG_TO_THE_BROWSER()
+    // **cmd-click opens a tab, shift-click a window, middle-click a tab**, and a control that called
+    // `prevent()` on all of them would be a control people fight. The anchor carries the whole
+    // address it would go to, so the browser has somewhere to take it.
+    var chosen = ""
+
+    took(value) =
+        chosen = value
+
+        null
+
+    fresh(<TagList tags={["slate"]} href={(t) -> "/?tag=" + t} onChoose={took}/>)
+
+    val followed = navigations()
+
+    click("a[href=\"/?tag=slate\"]", "click meta")
+
+    await sleep(1)
+
+    assertEq(chosen, "")
+    assert(!prevented())
+
+    click("a[href=\"/?tag=slate\"]", "click shift")
+    click("a[href=\"/?tag=slate\"]", "click button=1")
+
+    await sleep(1)
+
+    assertEq(chosen, "")
+    assertEq(navigations() - followed, 3)
+
+@test
+async A_CONTROL_WITH_NO_ONCHOOSE_IS_A_PLAIN_LINK_AND_THE_BROWSER_FOLLOWS_IT()
+    // **Which is what the whole library falls back to on a page whose script never ran.** No handler
+    // is installed at all, so there is nothing to prevent and the anchor does what an anchor does.
+    fresh(<TagList tags={["slate"]} href={(t) -> "/?tag=" + t}/>)
+
+    val followed = navigations()
+
+    click("a[href=\"/?tag=slate\"]")
+
+    await sleep(1)
+
+    assert(!prevented())
+    assertEq(navigations() - followed, 1)
+
+@test
+async A_PAGE_NUMBER_IS_THE_SAME_ARRANGEMENT_AND_HANDS_OVER_THE_NUMBER()
+    var went = 0
+
+    took(value) =
+        went = value
+
+        null
+
+    fresh(<Pagination page={2} size={20} total={45} href={(n) -> "/?page=" + string(n)}
+                      onChoose={took}/>)
+
+    click("a[href=\"/?page=3\"]")
+
+    await sleep(1)
+
+    assertEq(went, 3)
+    assert(prevented())
+
+@test
+async A_STEP_WITH_NOWHERE_TO_GO_IS_NOT_A_TARGET_AT_ALL()
+    // **There is no such thing as a disabled anchor**, so the first page's *previous* is a `<span>`
+    // and a keyboard walks straight past it.
+    fresh(<Pagination page={1} size={20} total={45} href={(n) -> "/?page=" + string(n)}/>)
+
+    assert(contains(shown(), "<span class=\"m-step m-off\">previous</span>"))
+    assertEq(indexOf(shown(), "<a class=\"m-step\" href=\"/?page=0\""), null)
+
+@test
+async A_SORT_ORDER_HANDS_OVER_THE_VALUE_AND_NOT_THE_LABEL()
+    // **The value is what a query wants and the label is what a person reads**, and an option that
+    // carries both is the case where the difference shows.
+    var chosen = ""
+
+    took(value) =
+        chosen = value
+
+        null
+
+    fresh(<Segmented options={[{ value: "busiest", label: "most replies" }]}
+                     href={(v) -> "/?sort=" + v} onChoose={took}/>)
+
+    click("a[href=\"/?sort=busiest\"]")
+
+    await sleep(1)
+
+    assertEq(chosen, "busiest")
+
+@test
+async THE_CHOICE_IN_FORCE_IS_MARKED_ON_THE_PAGE_AND_NOT_ONLY_IN_THE_MARKUP()
+    fresh(<Tag label="slate" href="/?tag=slate" current/>)
+
+    assert(contains(shown(), "aria-current=\"true\""))

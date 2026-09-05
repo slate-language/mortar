@@ -1,0 +1,44 @@
+// Page numbers, rather than *load more*.
+//
+// **A TOTAL IS WHAT MAKES THIS DIFFERENT FROM A NEXT BUTTON**, and it is why the prop is there: a
+// person who wants the fourth page can ask for it, and the number of pages is on the screen rather
+// than being discovered by pressing *more* eleven times. It is also what an offset query already
+// answers, so nothing is being asked of the store that it was not going to say.
+
+import { createElement, Fragment, style } from lath
+
+import tokens from "./tokens.css"
+import sheet from "./pagination.css"
+import { choice as Choice } from "./link.slx"
+import { classes, count, maybeFn, text } from "./props.sl"
+
+export pagination({ page = 1, size = 20, total = 0, href = null, onChoose = null, unit = "items",
+                    class: extra = "" }) =
+    style(tokens)
+    style(sheet)
+
+    val at = count("Pagination", "page", page)
+    val per = count("Pagination", "size", size)
+    val all = count("Pagination", "total", total)
+    val to = maybeFn("Pagination", "href", href)
+    val chose = maybeFn("Pagination", "onChoose", onChoose)
+    val what = text("Pagination", "unit", unit)
+
+    if per == 0
+        throw "Pagination's `size` is how many rows are on a page, and is 0"
+
+    val pages = if all == 0 then 1 else ((all + per - 1) / per)
+
+    // **A step that has nowhere to go is a `<span>` and not a disabled link.** There is no such thing
+    // as a disabled anchor: a keyboard still stops on one, and `aria-disabled` on a link that still
+    // navigates is a lie the browser does not read.
+    val back = if at <= 1 then null else if to == null then null else to(at - 1)
+    val on = if at >= pages then null else if to == null then null else to(at + 1)
+
+    val out = <nav class={classes("Pagination", "m-pager", extra)} aria-label="Pages">
+        <Choice class="m-step" href={back} value={at - 1} onChoose={chose}>previous</Choice>
+        <span class="m-where">page {at} of {pages}<span class="m-total">{all} {what}</span></span>
+        <Choice class="m-step" href={on} value={at + 1} onChoose={chose}>next</Choice>
+    </nav>
+
+    out

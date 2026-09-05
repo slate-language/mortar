@@ -1,0 +1,27 @@
+// A label for the people who cannot see the layout that would have been the label.
+//
+// **A search box whose only label is a magnifying glass, a table column whose heading is a delete
+// button, a "skip to content" link** -- each of them is a place where the visual design already says
+// what something is and the markup does not. This is the one component in the library whose whole
+// job is to be invisible.
+
+import { createElement, Fragment, style } from lath
+
+import sheet from "./hidden.css"
+import { classes, list, maybeText } from "./props.sl"
+
+export hidden({ tag = "span", class: extra = "", children = [] }) =
+    style(sheet)
+
+    val kids = list("VisuallyHidden", "children", children)
+    val name = maybeText("VisuallyHidden", "tag", tag)
+    val cls = classes("VisuallyHidden", "m-hidden", extra)
+
+    // **The element is a prop because a legend, a caption and a span are all this**, and putting a
+    // `<span>` where a `<legend>` belongs moves the text out of the group it names.
+    val out = if name == "span"
+        <span class={cls}>{kids}</span>
+    else
+        <legend class={cls}>{kids}</legend>
+
+    out

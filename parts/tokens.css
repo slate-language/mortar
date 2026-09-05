@@ -1,0 +1,77 @@
+/* The design tokens, and the only place in mortar a colour is written down.
+ *
+ * **Every other sheet in this package is `var(--m-…)` and nothing else**, which is what makes a
+ * theme one block of declarations rather than a second copy of every rule. `[data-theme="dark"]`
+ * re-declares the same names on the element `Theme` renders, and everything under it follows --
+ * there is no `.dark` variant of a card, and nothing can be dark in one place and light in another.
+ *
+ * **The `:root` block is what makes a single component work on its own.** An `<Avatar/>` rendered
+ * with no `Theme` above it still has the names it needs; the `[data-theme]` blocks are an override
+ * for a subtree and both of them are written, so a light island inside a dark page is a `Theme` and
+ * not a special case.
+ *
+ * **`color-scheme` travels with the tokens**, so the browser's own furniture -- a scrollbar, a form
+ * control's default, the canvas behind a `<dialog>` -- turns over with the page rather than staying
+ * light inside a dark one.
+ */
+
+:root {
+    --m-ink: #16181d;
+    --m-ink-soft: #5a616e;
+    --m-ink-faint: #8d94a3;
+    --m-paper: #fbfbfd;
+    --m-raised: #ffffff;
+    --m-line: #e2e5ec;
+    --m-accent: #2f5de0;
+    --m-accent-soft: #eaefff;
+    --m-accent-ink: #ffffff;
+    --m-danger: #b3261e;
+    --m-danger-soft: #fdeceb;
+    --m-good: #1f7a4d;
+    --m-shadow: 0 1px 2px rgb(20 24 33 / 6%), 0 6px 20px rgb(20 24 33 / 5%);
+
+    --m-gap: 1rem;
+    --m-radius: 10px;
+    --m-pill: 999px;
+    --m-measure: 46rem;
+    --m-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --m-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    color-scheme: light;
+}
+
+[data-theme="light"] {
+    --m-ink: #16181d;
+    --m-ink-soft: #5a616e;
+    --m-ink-faint: #8d94a3;
+    --m-paper: #fbfbfd;
+    --m-raised: #ffffff;
+    --m-line: #e2e5ec;
+    --m-accent: #2f5de0;
+    --m-accent-soft: #eaefff;
+    --m-accent-ink: #ffffff;
+    --m-danger: #b3261e;
+    --m-danger-soft: #fdeceb;
+    --m-good: #1f7a4d;
+    --m-shadow: 0 1px 2px rgb(20 24 33 / 6%), 0 6px 20px rgb(20 24 33 / 5%);
+
+    color-scheme: light;
+}
+
+[data-theme="dark"] {
+    --m-ink: #e9ecf2;
+    --m-ink-soft: #a6adbb;
+    --m-ink-faint: #767e8d;
+    --m-paper: #12141a;
+    --m-raised: #191c24;
+    --m-line: #2a2f3a;
+    --m-accent: #8aa6ff;
+    --m-accent-soft: #1d2540;
+    --m-accent-ink: #0d1120;
+    --m-danger: #ef8a80;
+    --m-danger-soft: #2a1a1a;
+    --m-good: #6fd39f;
+    --m-shadow: 0 1px 2px rgb(0 0 0 / 40%), 0 6px 20px rgb(0 0 0 / 30%);
+
+    color-scheme: dark;
+}

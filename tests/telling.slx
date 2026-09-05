@@ -1,0 +1,170 @@
+import { createElement, Fragment, mount, html } from lath
+import { EmptyState, Live, Problem, Toast, problemReason } from "../mortar.slx"
+
+import { countOf, fell, tree } from "./support.sl"
+
+// The four things the page says about itself: nothing here, something went wrong, and something
+// arrived.
+
+markup(el) -> string = tree(html(mount(el)))
+
+// -- EmptyState ------------------------------------------------------------------------------------
+
+@test
+AN_EMPTY_LIST_IS_A_STATE_AND_NOT_AN_ABSENCE()
+    // **Rendering nothing leaves a reader looking at a page that could equally be broken, still
+    // loading, or filtered down to nothing.** This says which.
+    val out = markup(<EmptyState/>)
+
+    assertEq(out, "<div class=\"m-empty\" role=\"status\"><h2>Nothing here</h2></div>")
+
+@test
+AN_EMPTY_STATE_MAY_SAY_MORE_AND_MAY_OFFER_SOMETHING()
+    val out = markup(<EmptyState title="No threads" detail="Nobody has started one.">
+        <a href="/new">Start one</a>
+    </EmptyState>)
+
+    assert(contains(out, "<h2>No threads</h2>"))
+    assert(contains(out, "<p>Nobody has started one.</p>"))
+    assert(contains(out, "<p class=\"m-do\"><a href=\"/new\">Start one</a></p>"))
+
+@test
+IT_IS_A_STATUS_AND_NOT_AN_ALERT()
+    // **A list that came back empty is worth saying once, politely.** An alert interrupts, and
+    // nothing here is urgent -- which is the pair with `Problem` below.
+    assert(contains(markup(<EmptyState/>), "role=\"status\""))
+    assert(!contains(markup(<EmptyState/>), "role=\"alert\""))
+
+@test
+AN_EMPTY_STATE_TITLE_THAT_IS_NOT_TEXT_NAMES_THE_PROP()
+    assert(contains(fell(() -> markup(<EmptyState title={0}/>)), "EmptyState's `title` is text"))
+
+// -- Problem -----------------------------------------------------------------------------------------
+
+@test
+NOTHING_WRONG_IS_NOTHING_RENDERED()
+    // **Which is what lets a page write `<Problem detail={note}/>` unconditionally** and hold no
+    // branch of its own.
+    assertEq(markup(<Problem/>), "")
+
+@test
+A_PROBLEM_DOCUMENT_IS_RENDERED_FOR_A_PERSON_AND_NOT_FOR_A_MACHINE()
+    // `type` and `instance` are for a log; `detail` is the sentence written about this occurrence.
+    val doc = { type: "https://example.test/probs/bad-form", title: "Bad Request", status: 400,
+                detail: "that did not work", instance: "/threads" }
+    val out = markup(<Problem problem={doc}/>)
+
+    assert(contains(out, "role=\"alert\""))
+    assert(contains(out, "<p class=\"m-title\">Bad Request</p>"))
+    assert(contains(out, "that did not work"))
+    assert(contains(out, "<span class=\"m-status\">400</span>"))
+    assert(!contains(out, "example.test"))
+    assert(!contains(out, "/threads"))
+
+@test
+A_TITLE_ON_ITS_OWN_IS_THE_SENTENCE_AND_NOT_A_HEADING()
+    // **A heading with nothing under it is a heading for nothing**, so where there is only one
+    // string it is the sentence.
+    val out = markup(<Problem problem={{ title: "Bad Request" }}/>)
+
+    assert(contains(out, "<p>Bad Request</p>"))
+    assert(!contains(out, "m-title"))
+
+@test
+THE_ROWS_OF_A_PROBLEM_ARE_SENTENCES_AND_THE_TWO_SHAPES_BOTH_READ()
+    val out = markup(<Problem detail="that did not work"
+                              errors={[{ path: "title", wanted: "text", got: "nothing" },
+                                       { path: "body", wanted: "text", got: "a number" },
+                                       { detail: "the tags are too long" }]}/>)
+
+    assertEq(countOf(out, "<li>"), 3)
+    assert(contains(out, "<li>title is missing</li>"))
+    assert(contains(out, "<li>body should be text and is a number</li>"))
+    assert(contains(out, "<li>the tags are too long</li>"))
+
+@test
+A_ROW_MAY_BE_A_JSON_POINTER_WHICH_IS_WHAT_RFC_9457_SUGGESTS()
+    val out = markup(<Problem detail="no" errors={[{ pointer: "/title", detail: "is missing" }]}/>)
+
+    assert(contains(out, "<li>is missing</li>"))
+
+@test
+AN_APPLICATION_MAY_WRITE_ITS_OWN_SENTENCE()
+    val say = (row) -> "the field " + row.path + " is wrong"
+    val out = markup(<Problem detail="no" errors={[{ path: "title" }]} reason={say}/>)
+
+    assert(contains(out, "<li>the field title is wrong</li>"))
+
+@test
+THE_DEFAULT_SENTENCE_IS_EXPORTED_SO_A_CUSTOM_ONE_CAN_FALL_BACK_TO_IT()
+    assertEq(problemReason({ path: "title", got: "nothing" }), "title is missing")
+    assertEq(problemReason({ path: "body", wanted: "text", got: "a number" }),
+             "body should be text and is a number")
+
+@test
+A_FLAT_DETAIL_WINS_OVER_THE_DOCUMENTS_AND_THE_ROWS_ARE_KEPT()
+    // **So a page with a whole problem document and one sentence of its own** -- *"that did not
+    // work"* from a submit that never reached the server -- writes the sentence and keeps the rows.
+    val doc = { detail: "from the server", errors: [{ detail: "a reason" }] }
+    val out = markup(<Problem problem={doc} detail="from the page"/>)
+
+    assert(contains(out, "from the page"))
+    assert(!contains(out, "from the server"))
+    assert(contains(out, "<li>a reason</li>"))
+
+@test
+A_PROBLEM_THAT_IS_NOT_A_RECORD_NAMES_THE_PROP()
+    assert(contains(fell(() -> markup(<Problem problem="broken"/>)), "Problem's `problem` is a record"))
+
+@test
+ERRORS_THAT_ARE_NOT_A_LIST_NAME_THE_PROP()
+    assert(contains(fell(() -> markup(<Problem detail="x" errors={{ a: 1 }}/>)), "Problem's `errors` is a list"))
+
+// -- Live and Toast --------------------------------------------------------------------------------------
+
+@test
+A_LIVE_REGION_IS_RENDERED_EVEN_WHEN_IT_IS_HOLDING_NOTHING()
+    // **A screen reader watches regions it already knows about**, so a `<div aria-live>` created at
+    // the same moment as the text inside it announces nothing at all. This is the one component in
+    // the library whose empty case is the important one.
+    assertEq(markup(<Live/>), "<div class=\"m-live\" aria-live=\"polite\" aria-atomic=\"false\"></div>")
+
+@test
+A_TOAST_IS_A_KEYED_LIST_INSIDE_A_LIVE_REGION()
+    val out = markup(<Toast messages={[{ id: 1, text: "a reply arrived" },
+                                       { id: 2, text: "it went wrong", tone: "danger" }]}/>)
+
+    assert(contains(out, "aria-live=\"polite\""))
+    assertEq(countOf(out, "<li class=\"m-toast"), 2)
+    assert(contains(out, "<li class=\"m-toast info\"><span>a reply arrived</span></li>"))
+    assert(contains(out, "<li class=\"m-toast danger\">"))
+
+@test
+A_TOAST_WITH_A_DISMISS_GETS_A_BUTTON_AND_ONE_WITHOUT_DOES_NOT()
+    val bare = markup(<Toast messages={[{ id: 1, text: "x" }]}/>)
+
+    assert(!contains(bare, "<button"))
+
+    val go = (id) -> null
+    val out = markup(<Toast messages={[{ id: 1, text: "x" }]} onDismiss={go}/>)
+
+    assert(contains(out, "<button type=\"button\" class=\"m-dismiss\">Dismiss</button>"))
+
+@test
+A_MESSAGE_WITH_NO_ID_NAMES_THE_PROP_AND_THE_ITEM()
+    // **The index is in the message.** A list of forty with one bad row is a mistake somebody has to
+    // find.
+    val said = fell(() -> markup(<Toast messages={[{ id: 1, text: "a" }, { text: "b" }]}/>))
+
+    assert(contains(said, "Toast's `messages`, item 1, has no `id`"))
+
+@test
+A_TONE_THAT_IS_NOT_ONE_OF_THE_THREE_NAMES_IT()
+    val said = fell(() -> markup(<Toast messages={[{ id: 1, text: "a", tone: "loud" }]}/>))
+
+    assert(contains(said, "`tone`"))
+    assert(contains(said, "\"info\", \"good\", \"danger\""))
+
+@test
+A_LIVE_MANNER_THAT_IS_NOT_ONE_OF_THE_TWO_NAMES_THE_PROP()
+    assert(contains(fell(() -> markup(<Live live="loud"/>)), "Live's `live`"))

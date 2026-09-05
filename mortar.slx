@@ -1,0 +1,137 @@
+// mortar -- the interface.
+//
+// **THIS FILE IS THE LIBRARY'S PUBLIC SURFACE AND IT IS ONE LINE PER COMPONENT ON PURPOSE.** slate
+// has no re-export: a name a program imports has to be declared in the file it imports, which is the
+// manifest's `main`. So the bodies and the stylesheets live under `parts/`, one component to a file
+// with its `.css` beside it, and this is where they become the library.
+//
+// **What that buys is a second library.** `chalk` -- github.com/slate-language/chalk -- declares
+// exactly these names with exactly these props and almost no style at all, so an application swaps
+// one import for the other and keeps its pages. A table in a README would be a description of an
+// interface; this is the interface, and a name that stops matching stops compiling.
+//
+// **Every component takes an optional `class`, appended to its own**, and every one of them checks
+// the props it is about to use and faults with a sentence naming the prop. Neither is repeated in
+// the table below.
+//
+// | | props |
+// |---|---|
+// | `Theme` | `theme`, `onChange`, `children` -- the provider, and the `data-theme` the sheets select on |
+// | `useTheme()` | `[theme, setTheme]` -- not a hook, so it may be called inside a condition |
+// | `Page` | `brand`, `brandHref`, `nav`, `search`, `footer`, `skipLabel`, `mainId`, `children` |
+// | `Avatar` | `name`, `src`, `size` |
+// | `Byline` | `name`, `src`, `href`, `at`, `size` |
+// | `Timestamp` | `at`, `show` |
+// | `Photo` | `src`, `alt` |
+// | `Card` | `title`, `href`, `level`, `children` |
+// | `ThreadCard` | `title`, `href`, `level`, `name`, `src`, `authorHref`, `at`, `excerpt`, `tags`, `tagHref`, `replies`, `children` |
+// | `CardList` | `children` |
+// | `Post` | `title`, `level`, `name`, `src`, `authorHref`, `at`, `body`, `photo`, `alt`, `tags`, `tagHref`, `compact`, `children` |
+// | `PostList` | `children` |
+// | `Tag` | `label`, `href`, `count`, `current`, `onChoose` |
+// | `TagList` | `tags`, `href`, `current`, `onChoose` |
+// | `Pagination` | `page`, `size`, `total`, `href`, `onChoose`, `unit` |
+// | `Segmented` | `options`, `value`, `href`, `onChoose`, `label` |
+// | `SortControls` | `options`, `sort`, `href`, `onChoose`, `label` |
+// | `EmptyState` | `title`, `detail`, `children` |
+// | `Problem` | `problem`, `title`, `detail`, `status`, `errors`, `reason` |
+// | `Live` | `live`, `atomic`, `children` |
+// | `Toast` | `messages`, `live`, `onDismiss`, `dismissLabel` |
+// | `Form` | `action`, `method`, `enctype`, `csrf`, `csrfName`, `onSubmit`, `label`, `children` |
+// | `Field` | `name`, `label`, `kind`, `value`, `error`, `hint`, `required`, `placeholder`, `autocomplete`, `id`, `onInput` |
+// | `TextArea` | `name`, `label`, `value`, `rows`, `error`, `hint`, `required`, `placeholder`, `id`, `onInput` |
+// | `FileInput` | `name`, `label`, `accept`, `maxSize`, `error`, `hint`, `required`, `id`, `onInput` |
+// | `Button` | `kind`, `variant`, `disabled`, `onClick`, `label`, `children` |
+// | `Actions` | `children` |
+// | `VisuallyHidden` | `tag`, `children` |
+//
+// **`docs/components.md` is the same table with every default and every refusal**, and it is checked
+// by the suite rather than kept up by hand.
+
+import { theme, useTheme as themeHook, Themes as themeWords } from "./parts/theme.slx"
+import { page } from "./parts/page.slx"
+import { avatar, Sizes as sizeWords } from "./parts/avatar.slx"
+import { byline, timestamp, Shows as showWords } from "./parts/byline.slx"
+import { photo } from "./parts/photo.slx"
+import { card, threadCard, cardList, Levels as cardLevels } from "./parts/card.slx"
+import { post, postList, Levels as postLevels } from "./parts/post.slx"
+import { tag, tagList } from "./parts/tags.slx"
+import { pagination } from "./parts/pagination.slx"
+import { segmented, sortControls } from "./parts/segmented.slx"
+import { emptyState } from "./parts/empty.slx"
+import { problem, reasonOf } from "./parts/problem.slx"
+import { live, toast, Manner as liveWords, Tones as toneWords } from "./parts/live.slx"
+import { form, Methods as formMethods } from "./parts/form.slx"
+import { field, textArea, fileInput } from "./parts/field.slx"
+import { button, actions, Kinds as buttonKinds, Variants as buttonVariants } from "./parts/button.slx"
+import { hidden } from "./parts/hidden.slx"
+
+// -- the theme -------------------------------------------------------------------------------------
+
+export val Theme = theme
+export val useTheme = themeHook
+
+// -- the frame -------------------------------------------------------------------------------------
+
+export val Page = page
+export val VisuallyHidden = hidden
+
+// -- people and moments ----------------------------------------------------------------------------
+
+export val Avatar = avatar
+export val Byline = byline
+export val Timestamp = timestamp
+export val Photo = photo
+
+// -- things somebody wrote -------------------------------------------------------------------------
+
+export val Card = card
+export val ThreadCard = threadCard
+export val CardList = cardList
+export val Post = post
+export val PostList = postList
+
+// -- finding things --------------------------------------------------------------------------------
+
+export val Tag = tag
+export val TagList = tagList
+export val Pagination = pagination
+export val Segmented = segmented
+export val SortControls = sortControls
+
+// -- what the page has to say ----------------------------------------------------------------------
+
+export val EmptyState = emptyState
+export val Problem = problem
+export val Live = live
+export val Toast = toast
+
+// -- forms -----------------------------------------------------------------------------------------
+
+export val Form = form
+export val Field = field
+export val TextArea = textArea
+export val FileInput = fileInput
+export val Button = button
+export val Actions = actions
+
+// -- the words a prop may be -------------------------------------------------------------------------
+//
+// **Every closed set of words is exported**, so an application can render its own control over the
+// same list rather than writing the three strings out again and finding out at run time that it
+// spelled one of them differently.
+
+export val Themes = themeWords
+export val Sizes = sizeWords
+export val Shows = showWords
+export val CardLevels = cardLevels
+export val PostLevels = postLevels
+export val LiveManners = liveWords
+export val Tones = toneWords
+export val FormMethods = formMethods
+export val ButtonKinds = buttonKinds
+export val ButtonVariants = buttonVariants
+
+// **The sentence one row of a problem document becomes**, exported because an application writing a
+// `reason` of its own usually wants to fall back to this one for the rows it does not recognise.
+export val problemReason = reasonOf

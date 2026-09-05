@@ -1,0 +1,89 @@
+// A raised surface, and the row a list of discussions is made of.
+//
+// **`Card` IS THE PLAIN ONE AND `ThreadCard` IS THE OPINIONATED ONE**, and having both is the point:
+// a component library that only ships the second is a library an application outgrows on its second
+// page, and one that only ships the first has left every application to write the same thirty lines.
+//
+// **The heading level is a prop.** A card inside a page whose `<h1>` is the page title is an `<h2>`;
+// the same card inside a section is an `<h3>`. A library that fixed it at `h2` would be deciding the
+// document outline for a page it cannot see.
+
+import { createElement, Fragment, style } from lath
+
+import tokens from "./tokens.css"
+import sheet from "./card.css"
+import { byline as Byline } from "./byline.slx"
+import { tagList as TagList } from "./tags.slx"
+import { choice as oneOf, classes, count, list, maybeFn, maybeText, moment, text } from "./props.sl"
+
+// The headings a card's title may be. **Not `h1`**: a card is never the page.
+export val Levels = ["h2", "h3", "h4"]
+
+// The title of a card, at whatever level the page said, linked where there is somewhere to go.
+heading(who: string, level: string, title, href) =
+    val name = maybeText(who, "title", title)
+
+    if name == null then return null
+
+    val to = maybeText(who, "href", href)
+    val inside = if to == null then name else <a href={to}>{name}</a>
+    val out = if level == "h2"
+        <h2 class="m-card-title">{inside}</h2>
+    elif level == "h3"
+        <h3 class="m-card-title">{inside}</h3>
+    else
+        <h4 class="m-card-title">{inside}</h4>
+
+    out
+
+export card({ title = null, href = null, level = "h2", class: extra = "", children = [] }) =
+    style(tokens)
+    style(sheet)
+
+    val how = oneOf("Card", "level", level, Levels)
+    val kids = list("Card", "children", children)
+    val out = <div class={classes("Card", "m-card", extra)}>
+        {heading("Card", how, title, href)}
+        {kids}
+    </div>
+
+    out
+
+// One discussion in a list of them: a title, who started it, what it says, its tags and how busy it
+// is.
+export threadCard({ title = "", href = null, level = "h2", name = "?", src = null, at = 0,
+                    authorHref = null, excerpt = "", tags = [], tagHref = null, replies = 0,
+                    class: extra = "", children = [] }) =
+    style(tokens)
+    style(sheet)
+
+    val how = oneOf("ThreadCard", "level", level, Levels)
+    val said = text("ThreadCard", "excerpt", excerpt)
+    val many = count("ThreadCard", "replies", replies)
+    val kids = list("ThreadCard", "children", children)
+    val cls = classes("ThreadCard", "m-card m-thread-card", extra)
+
+    // **A `<li>` and not a `<div>`, which is what `CardList` is a `<ul>` for.** A list of discussions
+    // is a list, and a reader whose browser announces *"list, 20 items"* knows how long the page is
+    // before walking it. `Card` is the plain surface and stays a `<div>`, because a card on its own
+    // is not an item of anything.
+    val out = <li class={cls}>
+        {heading("ThreadCard", how, text("ThreadCard", "title", title), href)}
+        <Byline name={name} src={src} href={authorHref} at={moment("ThreadCard", "at", at)}/>
+        {if said == "" then null else <p class="m-excerpt">{said}</p>}
+        <TagList tags={tags} href={maybeFn("ThreadCard", "tagHref", tagHref)}/>
+        <p class="m-replies">{many} {if many == 1 then "reply" else "replies"}</p>
+        {kids}
+    </li>
+
+    out
+
+// A list of cards, so that the gap between them is the library's answer rather than every page's.
+export cardList({ class: extra = "", children = [] }) =
+    style(tokens)
+    style(sheet)
+
+    val kids = list("CardList", "children", children)
+    val out = <ul class={classes("CardList", "m-cards", extra)}>{kids}</ul>
+
+    out

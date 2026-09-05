@@ -1,0 +1,34 @@
+/* The element `Theme` renders, which is the only thing in this package that paints a background.
+ *
+ * **It is a `<div>` and not the document.** A component library that wrote rules for `html` or
+ * `body` would be deciding the page's own layout for it, and a page is the application's; what this
+ * owns is the subtree the components render into. An application that wants the whole viewport says
+ * so in one rule of its own -- `body { margin: 0 }` and this element's `min-height` -- and the
+ * README says which one.
+ */
+
+.mortar {
+    color: var(--m-ink);
+    background: var(--m-paper);
+    font: 16px/1.6 var(--m-font);
+    min-height: 100%;
+
+    & *, & *::before, & *::after { box-sizing: border-box; }
+
+    & a {
+        color: var(--m-accent);
+        text-decoration-color: color-mix(in oklab, var(--m-accent) 35%, transparent);
+        text-underline-offset: 2px;
+    }
+
+    & h1, & h2, & h3 { line-height: 1.25; letter-spacing: -0.01em; }
+    & h1 { font-size: 1.6rem; margin: 0 0 .25rem; }
+    & h2 { font-size: 1.15rem; margin: 1.5rem 0 .5rem; }
+    & h3 { font-size: 1rem; margin: 1rem 0 .35rem; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .mortar a, .mortar button {
+        transition: background-color .12s ease, color .12s ease, border-color .12s ease;
+    }
+}

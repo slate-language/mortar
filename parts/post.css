@@ -1,0 +1,39 @@
+/* Something somebody wrote, with their name on it. */
+
+.m-post {
+    background: var(--m-raised);
+    border: 1px solid var(--m-line);
+    border-radius: var(--m-radius);
+    padding: 1.25rem 1.4rem;
+    box-shadow: var(--m-shadow);
+
+    & > :first-child { margin-top: 0; }
+    & > :last-child { margin-bottom: 0; }
+}
+
+/* **`pre-wrap` and `anywhere`, which is what a person's own line breaks and somebody's unbroken
+ * 400-character URL each need.** Without the second a paste widens the whole card and the page
+ * scrolls sideways. */
+.m-said {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    margin: .75rem 0;
+}
+
+.m-posts {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: .6rem;
+}
+
+.m-reply {
+    background: var(--m-raised);
+    border: 1px solid var(--m-line);
+    border-radius: var(--m-radius);
+    padding: .8rem 1rem;
+
+    & .m-said { margin: .35rem 0 0; }
+}

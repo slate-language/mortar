@@ -1,0 +1,70 @@
+// A row of choices where exactly one is in force -- a sort order, an open tab, a filter with a
+// default.
+//
+// **IT IS A LIST OF LINKS AND NOT A SET OF BUTTONS**, and that is the decision the file is made of.
+// A sort order is part of the address: somebody can bookmark it, send it to somebody else and press
+// back out of it, and the list is sorted correctly on a page whose script never ran. A row of
+// buttons is none of those things and is the shape a component library usually ships.
+//
+// `SortControls` is this with a name that says what it is for and a label already written.
+
+import { createElement, Fragment, style } from lath
+
+import tokens from "./tokens.css"
+import sheet from "./segmented.css"
+import { choice as Choice } from "./link.slx"
+import { classes, list, maybeFn, maybeText, said, text } from "./props.sl"
+
+// The choices, either as words or as records carrying a `value` and a `label`.
+valueOf(who: string, row) -> string
+    if row is string then return row
+
+    if !(row is object) || !((row.value ?? null) is string)
+        throw who + "'s `options` are words or records carrying a `value`, and one of them is " + said(row)
+
+    row.value
+
+labelOf(row) -> string
+    if row is string then return row
+
+    row.label ?? row.value
+
+export segmented({ options = [], value = null, href = null, onChoose = null, label = null,
+                   class: extra = "" }) =
+    style(tokens)
+    style(sheet)
+
+    val all = list("Segmented", "options", options)
+    val now = maybeText("Segmented", "value", value)
+    val to = maybeFn("Segmented", "href", href)
+    val chose = maybeFn("Segmented", "onChoose", onChoose)
+    val name = maybeText("Segmented", "label", label)
+
+    val one = (row) -> <li key={valueOf("Segmented", row)}>
+        <Choice class="m-seg" value={valueOf("Segmented", row)}
+                href={if to == null then null else to(valueOf("Segmented", row))}
+                current={now != null && now == valueOf("Segmented", row)}
+                mark="true" onChoose={chose}>{labelOf(row)}</Choice>
+    </li>
+
+    val items = <ul class={classes("Segmented", "m-segmented", extra)}>{all.map(one)}</ul>
+
+    // **The group is wrapped in a `<nav>` ONLY when it has a name**, because an unnamed landmark is
+    // worse than none: a reader listing the page's regions is handed *"navigation"* with nothing to
+    // tell it from the header's.
+    val out = if name == null then items else <nav aria-label={name}>{items}</nav>
+
+    out
+
+val Segmented = segmented
+
+// The same control, for the one thing it is almost always for.
+//
+// **The label is written in**, which is the whole difference: a page has a header's navigation and a
+// list's sort order, and a reader jumping between landmarks needs them told apart.
+export sortControls({ options = [], sort = null, href = null, onChoose = null, label = "Sort",
+                      class: extra = "" }) =
+    val out = <Segmented options={options} value={sort} href={href} onChoose={onChoose}
+                         label={label} class={classes("SortControls", "m-sorts", extra)}/>
+
+    out

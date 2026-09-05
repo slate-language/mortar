@@ -1,0 +1,143 @@
+import { createElement, Fragment, mount, html } from lath
+import { Avatar, Byline, Photo, Timestamp } from "../mortar.slx"
+
+import { countOf, fell, tree } from "./support.sl"
+
+// `Avatar`, `Byline`, `Timestamp` and `Photo` -- the four pieces a thing somebody wrote is attributed
+// with.
+
+// The markup one element makes, with the stylesheets taken off the front.
+markup(el) -> string = tree(html(mount(el)))
+
+// -- Avatar ------------------------------------------------------------------------------------------
+
+@test
+AN_AVATAR_WITH_NO_PICTURE_IS_THE_FIRST_LETTER_OF_THE_NAME()
+    val out = markup(<Avatar name="Ada"/>)
+
+    assertEq(out, "<span class=\"m-avatar small\" aria-hidden=\"true\">A</span>")
+
+@test
+AN_AVATAR_WITH_A_PICTURE_IS_AN_IMG_AND_THE_NAME_IS_ITS_ALT()
+    // **The name and not the file name.** A picture standing in for a person IS that person's name to
+    // anybody listening to the page, and a digest read out is worse than nothing.
+    val out = markup(<Avatar name="Ada" src="/uploads/a.png"/>)
+
+    assert(contains(out, "<img class=\"m-avatar small\""))
+    assert(contains(out, "alt=\"Ada\""))
+    assert(contains(out, "loading=\"lazy\""))
+    assert(!contains(out, "aria-hidden"))
+
+@test
+AN_AVATAR_WITH_NO_NAME_AT_ALL_IS_A_QUESTION_MARK()
+    assert(contains(markup(<Avatar name=""/>), ">?</span>"))
+
+@test
+THE_THREE_SIZES_ARE_THE_CLASS()
+    assert(contains(markup(<Avatar name="A" size="large"/>), "m-avatar large"))
+    assert(contains(markup(<Avatar name="A" size="medium"/>), "m-avatar medium"))
+
+@test
+A_SIZE_THAT_IS_NOT_ONE_OF_THE_THREE_NAMES_THE_PROP_AND_LISTS_THEM()
+    val said = fell(() -> markup(<Avatar name="A" size="huge"/>))
+
+    assert(contains(said, "Avatar's `size`"))
+    assert(contains(said, "\"small\", \"medium\", \"large\""))
+    assert(contains(said, "and is \"huge\""))
+
+@test
+A_NAME_THAT_IS_NOT_TEXT_NAMES_THE_PROP()
+    val said = fell(() -> markup(<Avatar name={42}/>))
+
+    assert(contains(said, "Avatar's `name` is text, and is 42"))
+
+@test
+A_CLASS_IS_APPENDED_AND_DOES_NOT_REPLACE()
+    // **The rule every component here follows.** A library whose class could be replaced is a library
+    // whose stylesheet stops applying the moment anybody reaches for it.
+    val out = markup(<Avatar name="A" class="mine"/>)
+
+    assertEq(out, "<span class=\"m-avatar small mine\" aria-hidden=\"true\">A</span>")
+
+// -- Timestamp ---------------------------------------------------------------------------------------
+
+@test
+A_TIMESTAMP_IS_THE_ROWS_OWN_MOMENT_AND_NEVER_THE_CLOCK()
+    // **Which is a hydration rule and not a style**: a server rendering *"4 minutes ago"* and a page
+    // adopting it a second later would disagree about the text, and a mismatch is a fault by design.
+    // The same input gives the same output for ever, which is what this asserts.
+    val out = markup(<Timestamp at={1756944000}/>)
+
+    assertEq(out, "<time class=\"m-at\" datetime=\"2025-09-04T00:00:00Z\" title=\"2025-09-04T00:00:00Z\">2025-09-04</time>")
+
+@test
+A_TIMESTAMP_CAN_SHOW_THE_WHOLE_STAMP()
+    val out = markup(<Timestamp at={1756944000} show="moment"/>)
+
+    assert(contains(out, ">2025-09-04T00:00:00Z</time>"))
+
+@test
+A_MOMENT_THAT_IS_NOT_A_NUMBER_NAMES_THE_PROP()
+    val said = fell(() -> markup(<Timestamp at="yesterday"/>))
+
+    assert(contains(said, "Timestamp's `at` is a moment in epoch seconds, and is \"yesterday\""))
+
+@test
+A_SHOW_THAT_IS_NOT_ONE_OF_THE_TWO_NAMES_THE_PROP()
+    assert(contains(fell(() -> markup(<Timestamp at={0} show="ago"/>)), "Timestamp's `show`"))
+
+// -- Byline ------------------------------------------------------------------------------------------
+
+@test
+A_BYLINE_IS_A_PICTURE_A_NAME_AND_A_MOMENT()
+    val out = markup(<Byline name="Ada" at={1756944000}/>)
+
+    assert(contains(out, "class=\"m-byline\""))
+    assert(contains(out, "m-avatar small"))
+    assert(contains(out, "<span class=\"m-who\">Ada</span>"))
+    assert(contains(out, "<time class=\"m-at\""))
+
+@test
+A_NAME_WITH_NOWHERE_TO_GO_IS_A_SPAN_AND_NOT_AN_EMPTY_LINK()
+    // **A link with no destination is a stop for nothing** to anything walking the page with a
+    // keyboard, which is why the two cases are two elements rather than an `href` of `""`.
+    assert(!contains(markup(<Byline name="Ada"/>), "<a"))
+
+    val linked = markup(<Byline name="Ada" href="/people/Ada"/>)
+
+    assert(contains(linked, "<a class=\"m-who\" href=\"/people/Ada\">Ada</a>"))
+
+@test
+A_BYLINE_HREF_THAT_IS_NOT_TEXT_NAMES_THE_PROP()
+    assert(contains(fell(() -> markup(<Byline name="A" href={7}/>)), "Byline's `href` is text, and is 7"))
+
+// -- Photo -------------------------------------------------------------------------------------------
+
+@test
+A_PHOTO_WITH_NO_SRC_IS_NOTHING_AT_ALL()
+    // **Nothing, rather than an empty element with `display: none` on it.** A component that renders
+    // nothing is one the reconciler holds no node for, and a page hydrating against markup that has
+    // none adopts none.
+    assertEq(markup(<Photo/>), "")
+
+@test
+A_PHOTO_IS_A_FIGURE_WITH_ITS_ALT()
+    val out = markup(<Photo src="/uploads/x.png" alt="a cat"/>)
+
+    assertEq(out, "<p class=\"m-photo\"><img src=\"/uploads/x.png\" alt=\"a cat\" loading=\"lazy\"></p>")
+
+@test
+AN_ALT_THAT_IS_NOT_TEXT_NAMES_THE_PROP()
+    assert(contains(fell(() -> markup(<Photo src="/x.png" alt={null}/>)), "Photo's `alt` is text"))
+
+// -- the sheets --------------------------------------------------------------------------------------
+
+@test
+A_COMPONENT_BRINGS_ITS_OWN_STYLESHEET_AND_THE_TOKENS_IT_NEEDS()
+    // **Two sheets and not one**: the tokens every rule in the library reads, and this component's
+    // own. Rendering two avatars is still two, which is `style`'s deduplication doing the work.
+    val out = html(mount(<Fragment><Avatar name="A"/><Avatar name="B"/></Fragment>))
+
+    assertEq(countOf(out, "<style data-lath-style>"), 2)
+    assert(contains(out, "--m-accent-soft"))
+    assert(contains(out, ".m-avatar"))

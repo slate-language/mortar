@@ -1,0 +1,54 @@
+// A choice that is a real link, and the one click a page is allowed to take.
+//
+// **THIS IS THE PIECE EVERY FILTER, SORT AND PAGE NUMBER IN THE LIBRARY IS BUILT OUT OF**, and it is
+// here rather than in each of them because the interesting half is the same in all three: what is
+// rendered is an `<a href>` carrying the whole address it would go to, so the control works on a page
+// whose script never ran, and a cmd-click opens the filtered list in a tab. Where the application
+// handed over an `onChoose`, an ordinary left click is taken instead and the page never reloads.
+//
+// **WITHOUT THE MODIFIERS AND THE BUTTON A PAGE SWALLOWS THE MOST ORDINARY THING ANYBODY DOES TO A
+// LINK.** cmd-click opens a tab, shift-click a window, middle-click a tab, and a control that called
+// `prevent()` on all of them would be a control people fight. `mods` and `button` are on the record
+// `lath` hands a handler for exactly this reason.
+//
+// **It draws nothing and has no stylesheet of its own.** What a choice looks like is the business of
+// the component that rendered it -- a pill, a tab, a step -- so the class comes in from outside and
+// the sheet that styles it belongs to the caller. It is internal to this package for the same
+// reason: on its own it is an anchor.
+
+import { createElement, Fragment } from lath
+
+import { flag, list, maybeFn, maybeText, text } from "./props.sl"
+
+// Whether a click is one a page may take, or one the browser must be left to have.
+export plain(e: object) -> boolean =
+    e.button == 0 && !e.mods.meta && !e.mods.ctrl && !e.mods.shift && !e.mods.alt
+
+// One choice.
+//
+// `href` is where it goes; with none it is a `<span>` and not a link with nowhere to go, which is
+// what a keyboard walking the page cares about. `mark` is what `aria-current` says when this is the
+// one in force -- `"page"` for a page number and `"true"` for a filter, which is the distinction the
+// attribute exists to make.
+export choice({ href = null, value = null, class: extra = "", current = false, mark = "true",
+                onChoose = null, children = [] }) =
+    val to = maybeText("a choice", "href", href)
+    val cls = text("a choice", "class", extra)
+    val on = flag("a choice", "current", current)
+    val chose = maybeFn("a choice", "onChoose", onChoose)
+    val kids = list("a choice", "children", children)
+
+    taken(e: object)
+        if !plain(e) then return null
+
+        e.prevent()
+
+        chose(value)
+
+    val out = if to == null
+        <span class={cls + " m-off"}>{kids}</span>
+    else
+        <a class={cls} href={to} aria-current={if on then mark else null}
+           onClick={if chose == null then null else taken}>{kids}</a>
+
+    out

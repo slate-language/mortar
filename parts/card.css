@@ -1,0 +1,44 @@
+/* A raised surface, and the one a list of threads is made of. */
+
+.m-card {
+    background: var(--m-raised);
+    border: 1px solid var(--m-line);
+    border-radius: var(--m-radius);
+    padding: 1rem 1.1rem;
+    box-shadow: var(--m-shadow);
+
+    & > :first-child { margin-top: 0; }
+    & > :last-child { margin-bottom: 0; }
+
+    & .m-card-title {
+        margin: 0;
+        font-size: 1.1rem;
+
+        & a {
+            color: var(--m-ink);
+            text-decoration: none;
+
+            &:hover { color: var(--m-accent); }
+        }
+    }
+}
+
+.m-thread-card {
+    & .m-excerpt { color: var(--m-ink-soft); margin: .4rem 0; }
+
+    & .m-replies {
+        margin: .4rem 0 0;
+        font-size: .85rem;
+        color: var(--m-ink-faint);
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+.m-cards {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: .75rem;
+}

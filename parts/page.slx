@@ -1,0 +1,44 @@
+// The frame every page is inside.
+//
+// **THE HEADER'S PIECES ARE SLOTS AND NOT PROPS**, and that is the decision that keeps this
+// component from growing a prop per application: what goes beside the brand is a search form on one
+// board, a project picker on another and nothing at all on a third, and each of them is an element
+// the application already knows how to build. So `search` and `nav` take elements, and this file
+// owns where they sit and what they sit in rather than what they are.
+//
+// **The landmarks are here because a page has exactly one of each.** One `<header>`, one `<main>`,
+// one `<footer>`, and the skip link that makes the second reachable from a keyboard -- put in a
+// component so that an application cannot render two `<main>` elements by writing two pages.
+
+import { createElement, Fragment, style } from lath
+
+import tokens from "./tokens.css"
+import sheet from "./page.css"
+import { classes, list, maybeText, text } from "./props.sl"
+
+export page({ brand = null, brandHref = "/", nav = null, search = null, footer = null,
+              skipLabel = "Skip to content", mainId = "main", class: extra = "", children = [] }) =
+    style(tokens)
+    style(sheet)
+
+    val name = maybeText("Page", "brand", brand)
+    val to = text("Page", "brandHref", brandHref)
+    val skip = text("Page", "skipLabel", skipLabel)
+    val where = text("Page", "mainId", mainId)
+    val kids = list("Page", "children", children)
+
+    // **`aria-label` on the header's nav and not on the header**, so a reader listing the page's
+    // regions is told which navigation this is -- the one about them, rather than the one about the
+    // list below.
+    val out = <div class={classes("Page", "m-shell", extra)}>
+        <a class="m-skip" href={"#" + where}>{skip}</a>
+        <header class="m-head">
+            {if name == null then null else <a class="m-brand" href={to}>{name}</a>}
+            {search}
+            {if nav == null then null else <nav class="m-me" aria-label="You">{nav}</nav>}
+        </header>
+        <main class="m-main" id={where}>{kids}</main>
+        {if footer == null then null else <footer class="m-foot">{footer}</footer>}
+    </div>
+
+    out

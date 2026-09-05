@@ -1,0 +1,46 @@
+/* The one thing on the page that changes something. */
+
+.m-button {
+    font: inherit;
+    font-weight: 550;
+    padding: .5rem 1.1rem;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+
+    &.primary {
+        border-color: var(--m-accent);
+        background: var(--m-accent);
+        color: var(--m-accent-ink);
+
+        &:hover { filter: brightness(1.08); }
+    }
+
+    &.quiet {
+        background: none;
+        color: var(--m-ink-soft);
+        font-size: .9rem;
+        padding: .3rem .55rem;
+        border-radius: var(--m-pill);
+
+        &:hover { background: var(--m-accent-soft); color: var(--m-accent); }
+    }
+
+    &.danger {
+        background: none;
+        color: var(--m-danger);
+        font-size: .9rem;
+        padding: .3rem .55rem;
+        border-radius: var(--m-pill);
+
+        &:hover { background: color-mix(in oklab, var(--m-danger) 12%, transparent); }
+    }
+
+    &:focus-visible { outline: 2px solid var(--m-accent); outline-offset: 2px; }
+    &:disabled { opacity: .55; cursor: not-allowed; filter: none; }
+}
+
+.m-do { margin: 1rem 0 0; }

@@ -1,0 +1,71 @@
+// Something somebody wrote, with their name on it.
+//
+// **THE BODY IS TEXT AND IS RENDERED AS TEXT**, which is the security decision this component makes
+// and the reason it takes a string rather than children: `lath`'s DOM host builds text nodes and its
+// string host escapes as it serialises, so a post containing `<script>` is a post containing the
+// eight characters `<script>` on both hosts. A component library that took markup here would be one
+// whose ordinary use is an injection.
+//
+// **`compact` is a reply and the default is the head of a thread**, which is the same component with
+// less furniture around it -- and a reply is an `<li>`, because a thread's replies are a list.
+
+import { createElement, Fragment, style } from lath
+
+import tokens from "./tokens.css"
+import sheet from "./post.css"
+import { byline as Byline } from "./byline.slx"
+import { photo as Photo } from "./photo.slx"
+import { tagList as TagList } from "./tags.slx"
+import { choice as oneOf, classes, flag, list, maybeFn, maybeText, moment, text } from "./props.sl"
+
+// The headings a post's title may be. **`h1` is here and is not in `Card`**: the post at the top of
+// a thread is what the page is about.
+export val Levels = ["h1", "h2", "h3"]
+
+titled(level: string, name) =
+    if name == null then return null
+
+    val out = if level == "h1"
+        <h1>{name}</h1>
+    elif level == "h2"
+        <h2>{name}</h2>
+    else
+        <h3>{name}</h3>
+
+    out
+
+export post({ title = null, level = "h1", name = "?", src = null, authorHref = null, at = 0,
+              body = "", photo = null, alt = "", tags = [], tagHref = null, compact = false,
+              class: extra = "", children = [] }) =
+    style(tokens)
+    style(sheet)
+
+    val how = oneOf("Post", "level", level, Levels)
+    val head = maybeText("Post", "title", title)
+    val said = text("Post", "body", body)
+    val small = flag("Post", "compact", compact)
+    val kids = list("Post", "children", children)
+    val when = moment("Post", "at", at)
+    val cls = classes("Post", if small then "m-reply" else "m-post", extra)
+
+    val inside = [titled(how, head),
+                  <Byline name={name} src={src} href={authorHref} at={when}
+                          size={if small then "small" else "medium"}/>,
+                  <TagList tags={tags} href={maybeFn("Post", "tagHref", tagHref)}/>,
+                  <div class="m-said">{said}</div>,
+                  <Photo src={photo} alt={maybeText("Post", "alt", alt) ?? ""}/>,
+                  kids]
+
+    val out = if small then <li class={cls}>{inside}</li> else <article class={cls}>{inside}</article>
+
+    out
+
+// The replies under a post.
+export postList({ class: extra = "", children = [] }) =
+    style(tokens)
+    style(sheet)
+
+    val kids = list("PostList", "children", children)
+    val out = <ul class={classes("PostList", "m-posts", extra)}>{kids}</ul>
+
+    out

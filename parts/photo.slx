@@ -1,0 +1,28 @@
+// A picture attached to something somebody wrote.
+//
+// **The alt text is a prop and has no default**, which is the one place this library is deliberately
+// awkward: a picture with no alternative text is invisible to a reader who cannot see it, and an
+// `alt` that defaulted to the file name would be worse than nothing -- it would read out a digest.
+// `alt=""` is the right answer for a purely decorative picture and has to be written.
+
+import { createElement, Fragment, style } from lath
+
+import tokens from "./tokens.css"
+import sheet from "./photo.css"
+import { classes, maybeText, text } from "./props.sl"
+
+export photo({ src = null, alt = "", class: extra = "" }) =
+    style(tokens)
+    style(sheet)
+
+    val file = maybeText("Photo", "src", src)
+    val said = text("Photo", "alt", alt)
+    val cls = classes("Photo", "m-photo", extra)
+
+    // **Nothing at all where there is no picture**, rather than an empty element with a class on it:
+    // a component that renders nothing is one the reconciler holds no node for, and a page hydrating
+    // against markup that has none adopts none.
+    val out = if file == null then null else
+        <p class={cls}><img src={file} alt={said} loading="lazy"/></p>
+
+    out

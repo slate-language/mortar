@@ -1,0 +1,42 @@
+/* The form itself, and the card it usually stands in. */
+
+.m-form {
+    margin: 1.25rem 0;
+
+    &.card {
+        background: var(--m-raised);
+        border: 1px solid var(--m-line);
+        border-radius: var(--m-radius);
+        padding: 1.25rem 1.4rem;
+        box-shadow: var(--m-shadow);
+    }
+
+    & > :first-child { margin-top: 0; }
+    & > :last-child { margin-bottom: 0; }
+}
+
+/* A form with one button and no fields -- signing out, revoking a session, deleting a post. */
+.m-doing {
+    display: inline;
+    margin: 0;
+}
+
+.m-search {
+    display: flex;
+    gap: .35rem;
+    flex: 1 1 12rem;
+    max-width: 22rem;
+    margin: 0;
+
+    & input {
+        flex: 1;
+        min-width: 0;
+        padding: .4rem .7rem;
+        border: 1px solid var(--m-line);
+        border-radius: var(--m-pill);
+        background: var(--m-paper);
+        color: inherit;
+        font: inherit;
+        font-size: .9rem;
+    }
+}

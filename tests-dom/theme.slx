@@ -1,0 +1,108 @@
+import { createElement, Fragment, mount, hydrate, html, flush } from lath
+import { domHost } from lath/dom
+import { location, pushPath } from slate:dom
+import { Button, Theme, useTheme } from "../mortar.slx"
+
+import { at, click, mutations, shown } from "./probe.slx"
+
+// The theme against a real address bar, which is the half a string cannot answer.
+//
+// **`useSearch` IS `usePath` UNDERNEATH ON A PAGE**, and `lath/dom` installs that at import -- so
+// importing the host is what turns the theme from a value a server handed in into the address bar
+// itself. That is the whole of why this file is here and not in `tests/theme.slx`.
+
+// What a page reads and what it presses.
+Toggle(props: object) =
+    val [now, setTheme] = useTheme()
+
+    <Fragment>
+        <p id="says">{now}</p>
+        <Button label="theme" onClick={() -> setTheme(if now == "light" then "dark" else "light")}>
+            {if now == "light" then "Dark" else "Light"}
+        </Button>
+    </Fragment>
+
+App(props: object) = <Theme><Toggle/></Theme>
+
+fresh(from: string) =
+    pushPath(from)
+    at("")
+
+    mount(<App/>, domHost("#page"))
+
+@test
+async THE_THEME_COMES_OFF_THE_ADDRESS_BAR()
+    fresh("/?theme=dark")
+
+    assert(contains(shown(), "data-theme=\"dark\""))
+    assert(contains(shown(), "<p id=\"says\">dark</p>"))
+
+@test
+async PRESSING_THE_TOGGLE_REWRITES_THE_ADDRESS_AND_THE_PAGE_FOLLOWS()
+    fresh("/")
+
+    assert(contains(shown(), "data-theme=\"light\""))
+
+    click("button[aria-label=\"theme\"]")
+
+    await sleep(1)
+
+    assertEq(location().query, "?theme=dark")
+    assert(contains(shown(), "data-theme=\"dark\""))
+    assert(contains(shown(), "<p id=\"says\">dark</p>"))
+
+@test
+async LIGHT_IS_THE_ABSENCE_OF_THE_PARAMETER_AND_NOT_FOUR_LETTERS()
+    // **Writing the default out would put a parameter on every URL anybody copied.**
+    fresh("/?theme=dark")
+
+    click("button[aria-label=\"theme\"]")
+
+    await sleep(1)
+
+    assertEq(location().query, "")
+    assert(contains(shown(), "data-theme=\"light\""))
+
+@test
+async CHANGING_THE_THEME_TOUCHES_THE_ONE_ATTRIBUTE_AND_THE_LABEL()
+    // **What a custom property carrying the theme buys, measured.** Every colour in the library is a
+    // `var(--m-…)`, so a whole page turning over is one attribute and whatever text actually changed
+    // -- not a class per element and not a second stylesheet.
+    fresh("/")
+
+    await sleep(1)
+
+    val before = mutations()
+
+    click("button[aria-label=\"theme\"]")
+
+    await sleep(1)
+
+    // `data-theme`, the paragraph's text and the button's: three records, and nothing rebuilt.
+    assertEq(mutations() - before, 3)
+
+@test
+async A_PAGE_RENDERED_DARK_ON_THE_SERVER_HYDRATES_DARK_AND_RECORDS_NOTHING()
+    // **The reason the theme is in the URL rather than in `localStorage`.** A server that can read
+    // the choice off the request renders the right colour the first time; a choice only the browser
+    // knows makes the page flip in front of the reader.
+    pushPath("/?theme=dark")
+
+    val sent = html(mount(<App/>))
+
+    assert(contains(sent, "data-theme=\"dark\""))
+
+    at(sent)
+
+    await sleep(1)
+
+    val before = mutations()
+
+    hydrate(<App/>, domHost("#page"))
+
+    await sleep(1)
+
+    assertEq(mutations() - before, 0)
+    assert(contains(shown(), "data-theme=\"dark\""))
+
+    pushPath("/")

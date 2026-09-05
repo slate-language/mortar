@@ -1,0 +1,111 @@
+import { createElement, Fragment, mount, html } from lath
+import { Button, Field, Form, Page, Theme, VisuallyHidden } from "../mortar.slx"
+
+import { countOf, fell, tree } from "./support.sl"
+
+// The frame every page is inside, and the label for the people who cannot see the layout.
+
+markup(el) -> string = tree(html(mount(el)))
+
+// -- Page ------------------------------------------------------------------------------------------
+
+@test
+A_PAGE_IS_THREE_LANDMARKS_AND_A_WAY_PAST_THE_FIRST()
+    // **Put in a component so that an application cannot render two `<main>` elements by writing two
+    // pages**, which is the ordinary way a document ends up with two.
+    val out = markup(<Page brand="the board"><p>content</p></Page>)
+
+    assertEq(out, "<div class=\"m-shell\">"
+                + "<a class=\"m-skip\" href=\"#main\">Skip to content</a>"
+                + "<header class=\"m-head\"><a class=\"m-brand\" href=\"/\">the board</a></header>"
+                + "<main class=\"m-main\" id=\"main\"><p>content</p></main>"
+                + "</div>")
+
+@test
+THE_HEADERS_PIECES_ARE_SLOTS_AND_NOT_PROPS()
+    // **What goes beside the brand is a search form on one board and a project picker on another**,
+    // and each of them is an element the application already knows how to build. This file owns
+    // where they sit, not what they are.
+    val search = <Form action="/" method="get" class="m-search"><Field name="q" kind="search"/></Form>
+    val nav = <Fragment><a href="/signin">Sign in</a><a href="/signup">Join</a></Fragment>
+    val out = markup(<Page brand="b" search={search} nav={nav} footer={<p>a footer</p>}>
+        <p>content</p>
+    </Page>)
+
+    assert(contains(out, "<form class=\"m-form m-search\""))
+    assert(contains(out, "<nav class=\"m-me\" aria-label=\"You\">"))
+    assert(contains(out, "<footer class=\"m-foot\"><p>a footer</p></footer>"))
+    assert(indexOf(out, "m-search") < indexOf(out, "m-me"))
+
+@test
+A_PAGE_WITH_NO_FOOTER_RENDERS_NONE()
+    assert(!contains(markup(<Page brand="b"/>), "<footer"))
+
+@test
+A_PAGE_WITH_NO_BRAND_RENDERS_NO_EMPTY_LINK()
+    assert(!contains(markup(<Page/>), "m-brand"))
+
+@test
+THE_SKIP_LINK_POINTS_AT_THE_MAIN_IT_RENDERED()
+    // **The first thing a keyboard meets on the page, and a way past thirty links in a header.**
+    val out = markup(<Page mainId="content"/>)
+
+    assert(contains(out, "href=\"#content\""))
+    assert(contains(out, "<main class=\"m-main\" id=\"content\">"))
+
+@test
+A_BRAND_HREF_THAT_IS_NOT_TEXT_NAMES_THE_PROP()
+    assert(contains(fell(() -> markup(<Page brandHref={7}/>)), "Page's `brandHref` is text, and is 7"))
+
+// -- VisuallyHidden -----------------------------------------------------------------------------------
+
+@test
+HIDDEN_TEXT_IS_STILL_ON_THE_PAGE()
+    // **`clip-path` and not `display: none`.** A hidden element is not announced at all, and the
+    // whole point of this one is to be announced.
+    val out = html(mount(<VisuallyHidden>Search</VisuallyHidden>))
+
+    assert(contains(out, "<span class=\"m-hidden\">Search</span>"))
+    assert(contains(out, "clip-path: inset(50%)"))
+    assert(!contains(out, "display: none;"))
+
+    // **And it is the one sheet in the library that registers no tokens**, because it reads none: it
+    // is a rule about geometry and there is no colour in it.
+    assertEq(countOf(out, "<style data-lath-style>"), 1)
+
+@test
+IT_MAY_BE_A_LEGEND_BECAUSE_A_SPAN_WHERE_A_LEGEND_BELONGS_LEAVES_THE_GROUP_UNNAMED()
+    assert(contains(markup(<VisuallyHidden tag="legend">Options</VisuallyHidden>),
+                    "<legend class=\"m-hidden\">Options</legend>"))
+
+// -- a whole page ---------------------------------------------------------------------------------------
+
+@test
+A_PAGE_CARRIES_EXACTLY_THE_SHEETS_OF_THE_COMPONENTS_IT_RENDERED()
+    // **THE CLAIM THE WHOLE LIBRARY IS BUILT ON, MEASURED.** A page holding a theme, a shell, a form,
+    // a field and a button carries five stylesheets and the tokens -- and nothing about an avatar, a
+    // pager or a toast, none of which it rendered.
+    val out = html(mount(<Theme>
+        <Page brand="b">
+            <Form action="/x"><Field name="a"/><Button kind="submit">Go</Button></Form>
+        </Page>
+    </Theme>))
+
+    assertEq(countOf(out, "<style data-lath-style>"), 6)
+    assert(contains(out, ".mortar {"))
+    assert(contains(out, ".m-shell"))
+    assert(contains(out, ".m-form"))
+    assert(contains(out, ".m-field"))
+    assert(contains(out, ".m-button"))
+    assert(!contains(out, ".m-avatar"))
+    assert(!contains(out, ".m-pager"))
+    assert(!contains(out, ".m-toast"))
+
+@test
+THE_SHEETS_ARRIVE_IN_FRONT_OF_THE_MARKUP_SO_A_FRAGMENT_IS_SELF_CONTAINED()
+    // **Which is what lets a server drop `html(root)` into a `<div>` and be done**: the rules arrive
+    // before the elements they are about, and there is nothing else to serve.
+    val out = html(mount(<Page brand="b"/>))
+
+    assert(startsWith(out, "<style data-lath-style>"))
+    assert(indexOf(out, "<div class=\"m-shell\"") > indexOf(out, "</style>"))

@@ -1,0 +1,240 @@
+import { createElement, Fragment, mount, html } from lath
+import { Actions, Button, Field, FileInput, Form, TextArea } from "../mortar.slx"
+
+import { countOf, fell, tree } from "./support.sl"
+
+// Every form control, and the form they stand in.
+//
+// **WHAT IS CHECKED MOST HERE IS THE WIRING**, because it is what a form gets wrong and what a
+// component library is for: `for`/`id` between a label and its control, `aria-describedby` from the
+// control to the hint and the error, `aria-invalid` where there is one. Four attributes that are
+// easy to write and easier to forget.
+
+markup(el) -> string = tree(html(mount(el)))
+
+// -- Form ----------------------------------------------------------------------------------------
+
+@test
+A_FORM_IS_A_REAL_FORM_AND_WORKS_WITH_NO_SCRIPT()
+    val out = markup(<Form action="/threads"><p>fields</p></Form>)
+
+    assertEq(out, "<form class=\"m-form\" action=\"/threads\" method=\"post\"><p>fields</p></form>")
+
+@test
+THE_TOKEN_TRAVELS_IN_A_HIDDEN_FIELD_BECAUSE_A_BROWSER_POSTS_FORMS_AND_NOT_HEADERS()
+    val out = markup(<Form action="/threads" csrf="abc123"/>)
+
+    assert(contains(out, "<input type=\"hidden\" name=\"_csrf\" value=\"abc123\">"))
+
+@test
+THE_TOKENS_FIELD_NAME_IS_THE_APPLICATIONS()
+    val out = markup(<Form action="/x" csrf="t" csrfName="authenticity_token"/>)
+
+    assert(contains(out, "name=\"authenticity_token\""))
+
+@test
+A_GET_FORM_CARRYING_A_TOKEN_IS_REFUSED_AND_THE_MESSAGE_SAYS_WHY()
+    // **A double-submit token is about a request that changes something.** Putting one on a search
+    // box would put it in the address bar of every search anybody sent to anybody else.
+    val said = fell(() -> markup(<Form action="/" method="get" csrf="t"/>))
+
+    assert(contains(said, "Form's `csrf`"))
+    assert(contains(said, "\"get\""))
+
+@test
+A_METHOD_THAT_IS_NEITHER_NAMES_THE_PROP()
+    assert(contains(fell(() -> markup(<Form action="/" method="put"/>)), "Form's `method`"))
+
+@test
+A_SEARCH_FORM_IS_A_GET_FORM_AND_CARRIES_NO_TOKEN()
+    val out = markup(<Form action="/" method="get" label="Search" class="m-search">
+        <Field name="q" kind="search" label="Search" value=""/>
+    </Form>)
+
+    assert(contains(out, "method=\"get\""))
+    assert(contains(out, "aria-label=\"Search\""))
+    assert(contains(out, "class=\"m-form m-search\""))
+    assert(!contains(out, "_csrf"))
+
+// -- Field ---------------------------------------------------------------------------------------
+
+@test
+A_FIELD_WIRES_THE_LABEL_TO_THE_CONTROL()
+    val out = markup(<Field name="title" label="Title"/>)
+
+    assertEq(out, "<p class=\"m-field\"><label for=\"f-title\">Title</label>"
+                + "<input id=\"f-title\" name=\"title\" type=\"text\"></p>")
+
+@test
+A_FIELD_WITH_NO_LABEL_USES_ITS_NAME()
+    assert(contains(markup(<Field name="title"/>), "<label for=\"f-title\">title</label>"))
+
+@test
+AN_ERROR_MAKES_THE_CONTROL_INVALID_AND_POINTS_AT_THE_SENTENCE()
+    val out = markup(<Field name="title" error="is missing"/>)
+
+    assert(contains(out, "aria-invalid=\"true\""))
+    assert(contains(out, "aria-describedby=\"f-title-error\""))
+    assert(contains(out, "<span class=\"m-error\" id=\"f-title-error\">is missing</span>"))
+
+@test
+A_HINT_AND_AN_ERROR_ARE_BOTH_NAMED_AND_THE_ERROR_IS_FIRST()
+    // **`aria-describedby` takes a list**, and what is read out first is what the reader most needs.
+    val out = markup(<Field name="title" hint="be brief" error="is missing"/>)
+
+    assert(contains(out, "aria-describedby=\"f-title-error f-title-hint\""))
+    assert(indexOf(out, "m-error") < indexOf(out, "m-hint"))
+
+@test
+A_FIELD_WITH_NEITHER_HAS_NO_DESCRIBEDBY_AT_ALL()
+    // **Rather than one naming an element that is not there**, which a screen reader resolves to
+    // nothing and a validator calls an error.
+    assert(!contains(markup(<Field name="title"/>), "aria-describedby"))
+
+@test
+A_VALUE_OF_NULL_LEAVES_THE_FIELD_UNCONTROLLED()
+    // **Which is what a form whose values live in refs wants**: the browser keeps what was typed and
+    // nothing writes it back on every render.
+    assert(!contains(markup(<Field name="title"/>), "value"))
+    assert(contains(markup(<Field name="title" value=""/>), "value=\"\""))
+    assert(contains(markup(<Field name="title" value="a draft"/>), "value=\"a draft\""))
+
+@test
+A_REQUIRED_FIELD_SAYS_SO_AND_A_FIELD_THAT_IS_NOT_HAS_NO_ATTRIBUTE()
+    // **`false` is no attribute at all, which is HTML's own rule**, and the two hosts agree about it
+    // -- `required="false"` would be read by a browser as *required*.
+    assert(contains(markup(<Field name="a" required/>), "required"))
+    assert(!contains(markup(<Field name="a"/>), "required"))
+
+@test
+A_FILE_IS_A_DIFFERENT_COMPONENT_AND_THE_MESSAGE_SAYS_SO()
+    // Rather than rendering an input that quietly ignores `value`, a browser refusing to be told
+    // which file is in one.
+    val said = fell(() -> markup(<Field name="photo" kind="file"/>))
+
+    assert(contains(said, "Field's `kind` is not \"file\""))
+    assert(contains(said, "FileInput"))
+
+@test
+A_FIELD_NAME_THAT_IS_NOT_TEXT_NAMES_THE_PROP()
+    assert(contains(fell(() -> markup(<Field name={1}/>)), "Field's `name` is text, and is 1"))
+
+// -- TextArea -------------------------------------------------------------------------------------
+
+@test
+A_TEXTAREA_HOLDS_ITS_TEXT_AS_A_CHILD_AND_NOT_AS_A_VALUE()
+    // **A textarea's text is its DEFAULT value and not its value**, which is HTML's own rule: writing
+    // the child of one somebody is typing in changes nothing they can see and is a mutation for
+    // nothing.
+    val out = markup(<TextArea name="body" label="Post" rows={8} value="hello"/>)
+
+    assertEq(out, "<p class=\"m-field\"><label for=\"f-body\">Post</label>"
+                + "<textarea id=\"f-body\" name=\"body\" rows=\"8\">hello</textarea></p>")
+
+@test
+AN_EMPTY_TEXTAREA_WRITES_NO_TEXT_AT_ALL()
+    // **Which is what lath 0.5.1 made hydratable**: `<textarea>{""}</textarea>` writes
+    // `<textarea></textarea>`, so the tree holds no node for it either.
+    assert(contains(markup(<TextArea name="body"/>), "rows=\"5\"></textarea>"))
+
+@test
+A_ROWS_THAT_IS_NOT_A_NUMBER_NAMES_THE_PROP()
+    assert(contains(fell(() -> markup(<TextArea name="b" rows="tall"/>)), "TextArea's `rows`"))
+
+// -- FileInput ------------------------------------------------------------------------------------
+
+@test
+A_FILE_INPUTS_HINT_IS_BUILT_FROM_WHAT_IT_WILL_TAKE()
+    // **An `accept` a browser enforces and a sentence a person reads are the same fact**, so a
+    // library that took both as props would ship applications where the two disagree.
+    val out = markup(<FileInput name="photo" label="Photo" accept="image/*" maxSize={5242880}/>)
+
+    assert(contains(out, "accept=\"image/*\""))
+    assert(contains(out, "<span class=\"m-hint\" id=\"f-photo-hint\">Images, up to 5 MB</span>"))
+    assert(contains(out, "aria-describedby=\"f-photo-hint\""))
+
+@test
+EXTENSIONS_ARE_READ_OUT_AS_WORDS()
+    val out = markup(<FileInput name="doc" accept=".pdf,.txt"/>)
+
+    assert(contains(out, ">PDF, TXT</span>"))
+
+@test
+A_SIZE_ON_ITS_OWN_STILL_READS()
+    assert(contains(markup(<FileInput name="f" maxSize={2048}/>), ">Up to 2 KB</span>"))
+
+@test
+A_FILE_INPUT_WITH_NOTHING_TO_SAY_SAYS_NOTHING()
+    assert(!contains(markup(<FileInput name="f"/>), "m-hint"))
+
+@test
+A_HINT_OF_ITS_OWN_WINS_OVER_THE_BUILT_ONE()
+    assert(contains(markup(<FileInput name="f" accept="image/*" hint="a square one, please"/>),
+                    ">a square one, please</span>"))
+
+@test
+A_MAXSIZE_THAT_IS_NOT_A_NUMBER_NAMES_THE_PROP()
+    assert(contains(fell(() -> markup(<FileInput name="f" maxSize="5MB"/>)), "FileInput's `maxSize`"))
+
+// -- Button ---------------------------------------------------------------------------------------
+
+@test
+A_BUTTON_DEFAULTS_TO_TYPE_BUTTON_WHICH_IS_THE_OPPOSITE_OF_HTMLS_DEFAULT()
+    // **A `<button>` inside a form with no `type` submits it**, so a *"show more"* written in the
+    // ordinary way posts the form the moment anybody presses it.
+    assertEq(markup(<Button>Show more</Button>),
+             "<button class=\"m-button primary\" type=\"button\">Show more</button>")
+
+@test
+THE_SUBMIT_BUTTON_OF_A_FORM_SAYS_SO_ONCE_WHERE_THE_READER_CAN_SEE_IT()
+    assert(contains(markup(<Button kind="submit">Post it</Button>), "type=\"submit\""))
+
+@test
+THE_THREE_VARIANTS_ARE_THE_CLASS()
+    assert(contains(markup(<Button variant="quiet">x</Button>), "m-button quiet"))
+    assert(contains(markup(<Button variant="danger">x</Button>), "m-button danger"))
+
+@test
+A_DISABLED_BUTTON_SAYS_SO_AND_ONE_THAT_IS_NOT_HAS_NO_ATTRIBUTE()
+    assert(contains(markup(<Button disabled>x</Button>), "disabled"))
+    assert(!contains(markup(<Button>x</Button>), "disabled"))
+
+@test
+A_LABEL_IS_FOR_A_BUTTON_WHOSE_CONTENT_IS_AN_ICON()
+    // **`aria-label` and not `title`**: a title is a tooltip, and a tooltip is not read out by
+    // anything a person navigating with a keyboard is using.
+    assert(contains(markup(<Button label="Delete">x</Button>), "aria-label=\"Delete\""))
+
+@test
+A_VARIANT_THAT_IS_NOT_ONE_OF_THE_THREE_NAMES_THE_PROP()
+    val said = fell(() -> markup(<Button variant="ghost">x</Button>))
+
+    assert(contains(said, "Button's `variant`"))
+    assert(contains(said, "\"primary\", \"quiet\", \"danger\""))
+
+@test
+A_KIND_THAT_IS_NOT_ONE_OF_THE_THREE_NAMES_THE_PROP()
+    assert(contains(fell(() -> markup(<Button kind="post">x</Button>)), "Button's `kind`"))
+
+@test
+ACTIONS_IS_THE_ROW_A_FORMS_BUTTONS_STAND_IN()
+    val out = markup(<Actions><Button kind="submit">Go</Button></Actions>)
+
+    assert(startsWith(out, "<p class=\"m-do\">"))
+
+// -- the sheets ----------------------------------------------------------------------------------------
+
+@test
+A_FORM_CARRIES_EXACTLY_THE_SHEETS_ITS_COMPONENTS_NEEDED()
+    // **The whole claim of the library, measured**: tokens, the form's own, the field's own and the
+    // button's -- four, and not one big stylesheet with everything in it.
+    val out = html(mount(<Form action="/x">
+        <Field name="a"/>
+        <TextArea name="b"/>
+        <Actions><Button kind="submit">Go</Button></Actions>
+    </Form>))
+
+    assertEq(countOf(out, "<style data-lath-style>"), 4)
+    assert(contains(out, ".m-field"))
+    assert(contains(out, ".m-button"))
+    assert(!contains(out, ".m-avatar"))

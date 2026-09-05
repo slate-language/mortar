@@ -1,0 +1,157 @@
+import { createElement, Fragment, mount, hydrate, html } from lath
+import { domHost } from lath/dom
+import { addressIs } from lath/router
+import { Actions, Avatar, Button, Card, CardList, EmptyState, Field, FileInput, Form, Live, Page,
+         Pagination, Photo, Post, PostList, Problem, Segmented, SortControls, Tag, TagList,
+         TextArea, Theme, ThreadCard, Timestamp, Toast, VisuallyHidden } from "../mortar.slx"
+import { Byline } from "../mortar.slx"
+
+import { at, mutations, shown } from "./probe.slx"
+
+// EVERY COMPONENT IN THE LIBRARY, HYDRATED AGAINST MARKUP A BROWSER PARSED, RECORDING NOTHING.
+//
+// **THE MEASUREMENT IS A `MutationObserver` AND IT COULD NOT BE ANYTHING ELSE.** Counting what the
+// framework asked the host to do would only say the library believes it touched nothing; this is the
+// browser's own answer, and it sees a write nobody knew they were making. A component that renders
+// `{n} replies` or `<textarea>{""}</textarea>` is exactly where a server and a page stop agreeing --
+// both of those were hydration faults on a real application before lath 0.5.1 -- so every component
+// here is put through the whole round trip: string host, markup, a parser, and back into the tree.
+//
+// **THE MARKUP IS THE STRING HOST'S OWN OUTPUT**, which is what a server sends: the `<style>`
+// elements stand in front of the fragment, the fragment goes in the container, and the page hydrates
+// against the whole of it.
+
+// One component, all the way round. The name is in the message so that a failure says which.
+async clean(name: string, el) =
+    val sent = html(mount(el))
+
+    at(sent)
+
+    // The records for planting the markup are the harness's own; the measurement starts after them.
+    await sleep(1)
+
+    val before = mutations()
+
+    hydrate(el, domHost("#page"))
+
+    await sleep(1)
+
+    val made = mutations() - before
+
+    if made != 0
+        throw name + " hydrated and the page recorded " + string(made) + " mutations: " + shown()
+
+    null
+
+@test
+async THE_PEOPLE_AND_THE_MOMENTS_HYDRATE_CLEAN()
+    await clean("Avatar", <Avatar name="Ada"/>)
+    await clean("Avatar with a picture", <Avatar name="Ada" src="/a.png" size="large"/>)
+    await clean("Timestamp", <Timestamp at={1756944000}/>)
+    await clean("Byline", <Byline name="Ada" href="/people/Ada" at={1756944000}/>)
+    await clean("Photo", <Photo src="/a.png" alt="a cat"/>)
+    await clean("Photo with nothing in it", <Photo/>)
+
+@test
+async THE_THINGS_SOMEBODY_WROTE_HYDRATE_CLEAN()
+    // **`{many} {word}` in `ThreadCard` is the run of text children that could not be hydrated
+    // before lath 0.5.1**: the tree writes three children and a parser reads one text node back.
+    await clean("Card", <Card title="A thread" href="/t/1"><p>inside</p></Card>)
+    await clean("ThreadCard", <ThreadCard title="A thread" href="/t/1" name="Ada" at={1756944000}
+                                          excerpt="something" tags={["a", "b"]}
+                                          tagHref={(t) -> "/?tag=" + t} replies={1}/>)
+    await clean("CardList", <CardList><ThreadCard key="a" title="a"/><ThreadCard key="b" title="b"/></CardList>)
+    await clean("Post", <Post title="A thread" name="Ada" at={1756944000} body="two
+lines" photo="/a.png" alt="A thread" tags={["a"]}/>)
+    await clean("PostList", <PostList><Post key="1" compact body="one"/><Post key="2" compact body="two"/></PostList>)
+
+@test
+async THE_CONTROLS_HYDRATE_CLEAN()
+    await clean("Tag", <Tag label="slate" href="/?tag=slate" count={12} current/>)
+    await clean("TagList", <TagList tags={[{ label: "a", count: 1 }, "b"]} href={(t) -> "/?tag=" + t}
+                                    current="a"/>)
+    await clean("Pagination", <Pagination page={2} size={20} total={45}
+                                          href={(n) -> "/?page=" + string(n)} unit="threads"/>)
+    await clean("Pagination at the first page", <Pagination page={1} total={0}/>)
+    await clean("Segmented", <Segmented options={["newest", { value: "busiest", label: "most" }]}
+                                        value="newest" href={(v) -> "/?sort=" + v} label="Sort"/>)
+    await clean("SortControls", <SortControls options={["newest"]} sort="newest"
+                                              href={(v) -> "/?sort=" + v}/>)
+
+@test
+async WHAT_THE_PAGE_SAYS_HYDRATES_CLEAN()
+    await clean("EmptyState", <EmptyState title="No threads" detail="Nobody has started one."/>)
+    await clean("Problem", <Problem problem={{ title: "Bad Request", status: 400,
+                                               detail: "that did not work" }}
+                                    errors={[{ path: "title", got: "nothing" }]}/>)
+    await clean("Live", <Live/>)
+    await clean("Toast", <Toast messages={[{ id: 1, text: "a reply arrived" },
+                                           { id: 2, text: "gone", tone: "danger" }]}/>)
+
+@test
+async THE_FORM_CONTROLS_HYDRATE_CLEAN()
+    // **A hidden input's `value` and a `rows={5}` are the two that used to record one mutation
+    // each**, and neither is a call the framework could have counted -- setting a property is not,
+    // and an attribute already right is only a mutation to somebody watching the document.
+    await clean("Form with a token", <Form action="/threads" csrf="abc123"><p>x</p></Form>)
+    await clean("Field", <Field name="title" label="Title" required placeholder="What about?"/>)
+    await clean("Field with a value", <Field name="title" value="a draft"/>)
+    await clean("Field with an error", <Field name="title" error="is missing" hint="be brief"/>)
+    await clean("TextArea", <TextArea name="body" label="Post" rows={8} value="hello"/>)
+    await clean("an empty TextArea", <TextArea name="body"/>)
+    await clean("FileInput", <FileInput name="photo" accept="image/*" maxSize={5242880}/>)
+    await clean("Button", <Button kind="submit" variant="danger" disabled>Post it</Button>)
+    await clean("Actions", <Actions><Button kind="submit">Go</Button></Actions>)
+
+@test
+async THE_FRAME_HYDRATES_CLEAN()
+    addressIs("/")
+
+    await clean("VisuallyHidden", <VisuallyHidden>Search</VisuallyHidden>)
+    await clean("Page", <Page brand="the board" nav={<a href="/signin">Sign in</a>}
+                              footer={<p>a footer</p>}><p>content</p></Page>)
+    await clean("Theme", <Theme><p>content</p></Theme>)
+
+@test
+async A_WHOLE_PAGE_OF_EVERY_COMPONENT_AT_ONCE_HYDRATES_CLEAN()
+    // **The one that could not be assembled out of the others.** Each component above is hydrated on
+    // its own, against markup holding only its own sheets; this is the case a server actually sends
+    // -- one container, one run of `<style>` elements, and every component in the library standing
+    // inside it.
+    addressIs("/?theme=dark")
+
+    val whole = <Theme>
+        <Page brand="the board" search={<Form action="/" method="get"><Field name="q" kind="search"/></Form>}
+              nav={<Fragment><Avatar name="Ada"/><Button variant="quiet">Sign out</Button></Fragment>}
+              footer={<p>a footer</p>}>
+            <SortControls options={["newest", "busiest"]} sort="newest" href={(v) -> "/?sort=" + v}/>
+            <TagList tags={[{ label: "slate", count: 4 }]} href={(t) -> "/?tag=" + t}/>
+            <CardList>
+                <ThreadCard key="1" title="One" href="/t/1" name="Ada" at={1756944000}
+                            excerpt="a thread" tags={["slate"]} replies={1}/>
+                <ThreadCard key="2" title="Two" href="/t/2" name="Bob" at={1756944000} replies={0}/>
+            </CardList>
+            <Pagination page={1} size={20} total={45} href={(n) -> "/?page=" + string(n)}/>
+            <Post title="One" name="Ada" at={1756944000} body="the body" photo="/a.png" alt="One"/>
+            <PostList><Post key="1" compact name="Bob" body="a reply"/></PostList>
+            <EmptyState title="No replies"/>
+            <Problem detail="that did not work" errors={[{ path: "body", got: "nothing" }]}/>
+            <Toast messages={[{ id: 1, text: "a reply arrived" }]}/>
+            <Form action="/threads" csrf="abc123">
+                <Field name="title" label="Title" required/>
+                <TextArea name="body" label="Post" rows={8}/>
+                <FileInput name="photo" accept="image/*" maxSize={5242880}/>
+                <Actions><Button kind="submit">Post it</Button></Actions>
+            </Form>
+            <VisuallyHidden>the end</VisuallyHidden>
+        </Page>
+    </Theme>
+
+    await clean("the whole library", whole)
+
+    // And it really did hydrate rather than quietly rebuild: the page is dark, and the markup is the
+    // one the string host wrote.
+    assert(contains(shown(), "data-theme=\"dark\""))
+    assert(contains(shown(), "1 reply"))
+
+    addressIs("/")

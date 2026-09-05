@@ -1,0 +1,25 @@
+/* Page numbers, which is what LIMIT and OFFSET look like to a person. */
+
+.m-pager {
+    display: flex;
+    align-items: center;
+    gap: var(--m-gap);
+    margin: 1.5rem 0;
+    font-size: .9rem;
+
+    & .m-step {
+        color: var(--m-accent);
+        text-decoration: none;
+
+        &.m-off { color: var(--m-ink-faint); }
+    }
+
+    & .m-where {
+        margin-left: auto;
+        margin-right: auto;
+        color: var(--m-ink-soft);
+        font-variant-numeric: tabular-nums;
+    }
+
+    & .m-total { margin-left: .6rem; color: var(--m-ink-faint); }
+}
