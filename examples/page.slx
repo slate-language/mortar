@@ -2,11 +2,10 @@
 //
 //     slate examples/page.slx
 //
-// **THIS FILE IS BYTE FOR BYTE THE SAME IN THE OTHER LIBRARY'S REPOSITORY EXCEPT FOR ONE IMPORT**,
-// which is the whole claim the two exist to make. Run it in both and diff the two outputs: what
-// differs is the appearance, and what does not is what the application was right to hand over -- the
-// landmarks, the roles, the wiring between a label and its control, the real anchor behind every
-// filter, and the `<li>` a thread in a list is.
+// **IT IS A BOARD AND NOT A GALLERY OF COMPONENTS**, which is what makes it worth running: every
+// piece here is doing the job it was built for -- the landmarks, the roles, the wiring between a
+// label and its control, the real anchor behind every filter and every page number, and the `<li>` a
+// thread in a list is. What comes out is what a server would send.
 //
 // **A program that INSTALLED the package writes `from mortar` rather than the relative path below.**
 // This one is inside the repository, where the package's own name is not something to resolve.

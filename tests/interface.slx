@@ -3,14 +3,14 @@ import page from "../docs/components.md"
 
 // THE INTERFACE, AS A TEST.
 //
-// **THIS FILE IS THE SAME IN `mortar` AND IN `chalk`, AND THAT IS THE WHOLE POINT OF IT.** Two
-// libraries that an application can swap have to agree about their names before they can disagree
-// about anything else, and a table in a README is a description of an interface rather than the
-// interface. This is checked on every run of both suites, so a component added to one and forgotten
-// in the other is a red test rather than a page that stops compiling in somebody else's application.
+// **WHAT A LIBRARY EXPORTS IS A PROMISE TO EVERY APPLICATION THAT IMPORTED IT**, and slate has no
+// re-export -- so `mortar.slx` is the whole of that promise, and a name dropped from it, renamed, or
+// quietly turned into something that is not a function is a page that stops compiling somewhere
+// else. This is the list read back: every name, what kind of thing it is, and a count, so that the
+// surface cannot change by accident.
 //
-// **It says nothing about what anything LOOKS like**, which is the other half of the arrangement:
-// the two libraries share this file and share nothing else.
+// **It says nothing about what anything LOOKS like.** Appearance is what the rest of the suite and
+// the stylesheets are about; this file is the shape of the library and nothing else.
 
 // Every component the library exports.
 val Components = ["Theme", "Page", "VisuallyHidden",

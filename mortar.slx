@@ -5,10 +5,9 @@
 // manifest's `main`. So the bodies and the stylesheets live under `parts/`, one component to a file
 // with its `.css` beside it, and this is where they become the library.
 //
-// **What that buys is a second library.** `chalk` -- github.com/slate-language/chalk -- declares
-// exactly these names with exactly these props and almost no style at all, so an application swaps
-// one import for the other and keeps its pages. A table in a README would be a description of an
-// interface; this is the interface, and a name that stops matching stops compiling.
+// **A table in a README would be a description of an interface; this is the interface.** Every name
+// an application can reach is on one of the lines below, so a component that stops being declared
+// here stops compiling for everybody who imported it -- which is the check the table cannot make.
 //
 // **Every component takes an optional `class`, appended to its own**, and every one of them checks
 // the props it is about to use and faults with a sentence naming the prop. Neither is repeated in

@@ -31,33 +31,31 @@ print(html(mount(<App/>)))
 `createElement` and `Fragment` have to be imported wherever an element is written: slate's parser
 desugars `<div/>` into a call to them.
 
-## Why there are two of these
+## What one page comes to
 
-**[`chalk`](https://github.com/slate-language/chalk) declares exactly the same names with exactly the
-same props and almost no style at all.** An application swaps one import for the other and keeps its
-pages — and what it sees change is precisely the part that was appearance.
-
-`examples/page.slx` is the same file in both repositories except for one import. Run it in each:
+`examples/page.slx` is a board — threads, a reply, a filter, a sort order, a page number, a form
+and a problem — rendered to markup with nothing else in the room:
 
 ```
 slate examples/page.slx
 ```
 
-| | `mortar` | `chalk` |
-|---|---|---|
-| markup for that page | 3,955 bytes | 2,940 bytes |
-| stylesheets on it | 16 | 1 |
-| whole answer | 20,327 bytes | 4,642 bytes |
+| | |
+|---|---|
+| markup for that page | 3,955 bytes |
+| stylesheets on it | 16 |
+| whole answer | 20,327 bytes |
 
-**What is identical in the two outputs is the interesting half**: the `<header>`, `<main>` and
-`<footer>`, the skip link, `role="status"` on an empty list and `role="alert"` on a problem, the
-`aria-live` region rendered before there is anything in it, `for`/`id` between every label and its
-control, `aria-describedby` and `aria-invalid` where a field has an error, `aria-current` on the
-filter in force, a real `<a href>` behind every sort order and page number, and the `<li>` a thread
-in a list is. None of that is decoration, and neither library leaves it out.
+**A page carries only what it rendered.** Each component brings its own sheet the first time it
+appears and never again, so a page with no `Toast` on it ships no toast css — which is what one
+stylesheet per component buys, and why there is no build step to configure.
 
-**What differs is everything else.** `mortar` puts a class on each element and a stylesheet behind
-it; `chalk` writes the element and a `data-` attribute for the word you gave it.
+**And most of what comes out is not decoration at all**: the `<header>`, `<main>` and `<footer>`, the
+skip link, `role="status"` on an empty list and `role="alert"` on a problem, the `aria-live` region
+rendered before there is anything in it, `for`/`id` between every label and its control,
+`aria-describedby` and `aria-invalid` where a field has an error, `aria-current` on the filter in
+force, a real `<a href>` behind every sort order and page number, and the `<li>` a thread in a list
+is. That is the half an application should not be writing again.
 
 ## The interface
 
@@ -198,8 +196,8 @@ NODE_OPTIONS="--import ./tests-dom/setup.mjs" slate test --js tests-dom
 into a real [jsdom](https://github.com/jsdom/jsdom) document — jsdom is a **dev** dependency of this
 repository and of nothing else; a program that uses this package never sees npm.
 
-`tests/interface.slx` is the same file in `chalk`'s repository, which is what keeps the two libraries
-swappable.
+`tests/interface.slx` reads that surface back — every name, what kind of thing it is, and a count —
+so it cannot change by accident.
 
 ## Requirements
 
