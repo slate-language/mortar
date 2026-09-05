@@ -1,5 +1,5 @@
 import { createElement, Fragment, mount, html, flush, useContext, useState } from lath
-import { addressIs } from lath/router
+import { addressIs, addressNow } from lath/router
 import { Avatar, Theme, Themes, useTheme } from "../mortar.slx"
 
 import { countOf, fell, tree } from "./support.sl"
@@ -164,12 +164,51 @@ A_THEME_THAT_IS_NEITHER_WORD_NAMES_THE_PROP_AND_LISTS_THEM()
     assert(contains(said, "\"light\", \"dark\""))
 
 @test
-A_THEME_IN_THE_URL_THAT_IS_NEITHER_WORD_NAMES_WHERE_IT_CAME_FROM()
-    // **`?theme` and not `theme`**, because the mistake is in the address and not in the tag -- and a
-    // message naming a prop nobody wrote would send the reader to the wrong file.
-    addressIs("/?theme=midnight")
+A_THEME_IN_THE_URL_THAT_IS_NEITHER_WORD_IS_THE_DEFAULT_AND_SAYS_NOTHING()
+    // **The address is not the program's to get right.** `?theme=chartreuse` is something a person
+    // typed or a link carried, so a fault there is a 500 served for a stranger's spelling -- and
+    // there is nobody reading the page who could fix it. The default is the answer, quietly. The
+    // `theme` PROP is the other case and still refuses: that one is the program's mistake.
+    addressIs("/?theme=chartreuse")
 
-    assert(contains(fell(() -> markup(<Theme><p>x</p></Theme>)), "Theme's `?theme`"))
+    assertEq(markup(<Theme><p>x</p></Theme>), "<div class=\"mortar\" data-theme=\"light\"><p>x</p></div>")
+
+    addressIs("/?theme=")
+
+    assertEq(markup(<Theme><p>x</p></Theme>), "<div class=\"mortar\" data-theme=\"light\"><p>x</p></div>")
+
+    plain()
+
+@test
+SETTING_THE_THEME_KEEPS_THE_REST_OF_THE_QUERY()
+    // **A toggle that wrote only its own name would throw the page away.** Changing the colour of
+    // `/?tag=slate&sort=busiest` must leave the filter and the sort order exactly where they were;
+    // the theme is one name in the query and not the whole of it.
+    addressIs("/?tag=slate&sort=busiest")
+
+    var setter = null
+
+    Toggle(props: object) =
+        val [now, set] = useTheme()
+
+        setter = set
+
+        <p>{now}</p>
+
+    val root = mount(<Theme><Toggle/></Theme>)
+
+    setter("dark")
+    flush(root)
+
+    assertEq(addressNow(), "/?tag=slate&sort=busiest&theme=dark")
+    assert(contains(html(root), "data-theme=\"dark\""))
+
+    // **And back off again from a URL that now carries it**, which is the render after the write
+    // reading its own address rather than the one the first render was handed.
+    setter("light")
+    flush(root)
+
+    assertEq(addressNow(), "/?tag=slate&sort=busiest")
 
     plain()
 

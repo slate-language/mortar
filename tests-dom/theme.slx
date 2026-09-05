@@ -64,6 +64,47 @@ async LIGHT_IS_THE_ABSENCE_OF_THE_PARAMETER_AND_NOT_FOUR_LETTERS()
     assert(contains(shown(), "data-theme=\"light\""))
 
 @test
+async THE_TOGGLE_KEEPS_THE_REST_OF_THE_QUERY()
+    // **A toggle that wrote only its own name would throw the page away.** The filter and the sort
+    // order a person is reading under are in the same query as the colour, and pressing the colour
+    // is not a request to go back to an unfiltered board.
+    fresh("/?tag=slate&sort=busiest")
+
+    click("button[aria-label=\"theme\"]")
+
+    await sleep(1)
+
+    assertEq(location().query, "?tag=slate&sort=busiest&theme=dark")
+    assert(contains(shown(), "data-theme=\"dark\""))
+
+    click("button[aria-label=\"theme\"]")
+
+    await sleep(1)
+
+    assertEq(location().query, "?tag=slate&sort=busiest")
+    assert(contains(shown(), "data-theme=\"light\""))
+
+    pushPath("/")
+
+@test
+async A_THEME_IN_THE_ADDRESS_THAT_IS_NEITHER_WORD_IS_THE_DEFAULT()
+    // **An address is whatever a person typed**, so an unrecognised theme renders the default rather
+    // than faulting -- and the toggle above it still works, off that default.
+    fresh("/?theme=chartreuse")
+
+    assert(contains(shown(), "data-theme=\"light\""))
+    assert(contains(shown(), "<p id=\"says\">light</p>"))
+
+    click("button[aria-label=\"theme\"]")
+
+    await sleep(1)
+
+    assertEq(location().query, "?theme=dark")
+    assert(contains(shown(), "data-theme=\"dark\""))
+
+    pushPath("/")
+
+@test
 async CHANGING_THE_THEME_TOUCHES_THE_ONE_ATTRIBUTE_AND_THE_LABEL()
     // **What a custom property carrying the theme buys, measured.** Every colour in the library is a
     // `var(--m-…)`, so a whole page turning over is one attribute and whatever text actually changed

@@ -63,6 +63,16 @@ export useTheme() -> array =
 //
 // **`theme=light` is the absence of the parameter.** Writing the default out would put a parameter
 // on every URL anybody copied, so `set("light")` takes it off.
+//
+// **`set` KEEPS THE REST OF THE QUERY**, which is not a nicety: a theme toggle on
+// `/?tag=slate&sort=busiest` that wrote only its own name would throw the filter and the sort order
+// away, and the page a person was reading would be gone along with the colour they wanted changed.
+//
+// **A `?theme` nobody recognises is the default, and says nothing.** The address is whatever a
+// person typed or a link they followed carried, so `/?theme=chartreuse` is not a mistake anybody
+// reading the page can fix -- and a fault there is a 500 on a server for a value a stranger chose.
+// The `theme` *prop* is the opposite case: it comes from the program, so a word that is neither of
+// the two still refuses and still names the prop.
 export theme({ theme = null, onChange = null, class: extra = "", children = [] }) =
     style(tokens)
     style(sheet)
@@ -78,7 +88,11 @@ export theme({ theme = null, onChange = null, class: extra = "", children = [] }
     val query = search[0]
     val write = search[1]
 
-    val now = if given != null then given else choice("Theme", "?theme", query.theme ?? "light", Themes)
+    // What the address asked for, and the default where it asked for something that is not a theme.
+    val asked = query.theme ?? "light"
+    val inUrl = if asked is string && Themes.indexOf(asked) != null then asked else "light"
+
+    val now = if given != null then given else inUrl
 
     // Where a change goes, which is the whole difference between the two arrangements.
     set(next) =
@@ -90,7 +104,7 @@ export theme({ theme = null, onChange = null, class: extra = "", children = [] }
 
             handler(wanted)
         else
-            write({ theme: if wanted == "light" then null else wanted })
+            write(query with { theme: if wanted == "light" then null else wanted })
 
         null
 

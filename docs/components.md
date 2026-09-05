@@ -34,9 +34,16 @@ component knows the value and the application knows what a value means as a URL.
 Renders `<div class="mortar" data-theme="…">`, which is what every stylesheet in the library selects
 a dark page on, and provides the value `useTheme` reads.
 
-**Refuses**: a `theme` that is neither word; a `?theme` in the URL that is neither word, naming
-`` `?theme` `` so the reader looks at the address rather than at the tag; a `set` on a controlled
-`Theme` with no `onChange`.
+**Setting the theme keeps the rest of the query.** `set("dark")` on `/?tag=slate&sort=busiest`
+writes `/?tag=slate&sort=busiest&theme=dark`, and `set("light")` takes the name back off — the
+default is the absence of the parameter, not four letters on every URL anybody copied.
+
+**A `?theme` that is neither word is the default, quietly.** The address is whatever a person typed
+or a link carried, so `/?theme=chartreuse` renders light rather than faulting; a fault there would be
+a 500 served for a stranger's spelling, with nobody reading the page able to fix it.
+
+**Refuses**: a `theme` prop that is neither word — that one comes from the program, so it is the
+program's mistake and says so; a `set` on a controlled `Theme` with no `onChange`.
 
 ## `useTheme()`
 
