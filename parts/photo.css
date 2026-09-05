@@ -1,13 +1,19 @@
-/* A picture on a post. */
+/* A picture on a post.
+ *
+ * **The ground under it is the sunken colour**, so a transparent PNG and a photograph that has not
+ * arrived both land on something rather than on the card, and the box does not change size when the
+ * file does.
+ */
 
 .m-photo {
-    margin: .75rem 0 0;
+    margin: var(--m-space-4) 0 0;
 
     & img {
+        display: block;
         max-width: 100%;
         height: auto;
         border-radius: var(--m-radius);
         border: 1px solid var(--m-line);
-        display: block;
+        background: var(--m-sunken);
     }
 }

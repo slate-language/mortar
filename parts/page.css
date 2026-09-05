@@ -1,66 +1,138 @@
-/* The frame every page is inside: a header, the content, a footer. */
+/* The frame every page is inside: a header, the content, a footer.
+ *
+ * **THE SHELL OWNS THE PAGE'S VERTICAL RHYTHM AND NOTHING ELSE DOES.** `<main>` is ordinary flow, so
+ * the margins of the components stacked in it COLLAPSE against each other -- two siblings that each
+ * ask for a step of space get one step between them and not two. That is why every block-level
+ * component in this library declares `margin-block` from the same scale and none of them declares a
+ * gap for the thing above it: the rhythm comes out even however they are ordered, and a component
+ * rendered on its own still has room around it.
+ *
+ * **The header's content and the main column are aligned to the same measure.** The header's
+ * background runs the full width and its padding does not, so the brand sits directly over the first
+ * card rather than out at the edge of the window -- one column, from the top of the page to the
+ * bottom.
+ */
 
 .m-shell {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-}
+    min-height: 100dvh;
 
-.m-head {
-    display: flex;
-    align-items: center;
-    gap: var(--m-gap);
-    flex-wrap: wrap;
-    padding: .75rem max(1rem, calc((100% - var(--m-measure)) / 2));
-    background: var(--m-raised);
-    border-bottom: 1px solid var(--m-line);
-    position: sticky;
-    top: 0;
-    z-index: 5;
+    /* **A skip link is invisible until it has the caret**, which is the whole of what it is for: the
+     * first thing a keyboard meets on the page, and a way past thirty links in a header. It is drawn
+     * over the header rather than moving it, so nothing on the page jumps as it appears.
+     *
+     * **`opacity` AND the transform, not the transform alone.** A box parked above the viewport
+     * still casts its shadow down into it -- a pale smudge in the top corner of every page, which is
+     * what the first version of this did. It stays focusable throughout: `visibility` or `display`
+     * would take it out of the tab order and there would be no skip link at all. */
+    & .m-skip {
+        position: absolute;
+        left: var(--m-space-2);
+        top: var(--m-space-2);
+        z-index: 30;
+        background: var(--m-accent);
+        color: var(--m-accent-ink);
+        font-size: var(--m-text-ui);
+        font-weight: var(--m-weight-medium);
+        padding: var(--m-space-2) var(--m-space-4);
+        border-radius: var(--m-radius-sm);
+        box-shadow: var(--m-shadow-lg);
+        text-decoration: none;
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(calc(-100% - var(--m-space-4)));
+        transition: transform var(--m-quick) var(--m-ease),
+                    opacity var(--m-quick) var(--m-ease);
 
+        &:focus-visible {
+            opacity: 1;
+            pointer-events: auto;
+            transform: none;
+        }
+    }
+
+    & .m-head {
+        display: flex;
+        align-items: center;
+        gap: var(--m-space-3) var(--m-space-5);
+        flex-wrap: wrap;
+        padding: var(--m-space-3) max(var(--m-space-4), calc((100% - var(--m-measure)) / 2));
+        background: var(--m-raised);
+        background: color-mix(in oklab, var(--m-raised) 86%, transparent);
+        backdrop-filter: saturate(180%) blur(14px);
+        border-bottom: 1px solid var(--m-line);
+        position: sticky;
+        top: 0;
+        z-index: 5;
+
+        /* The header owns the boxes of whatever is slotted into it: a form dropped in here keeps its
+         * own look and gives up its own margins. */
+        & > * { margin-block: 0; }
+    }
+
+    /* **The brand is ink and not accent.** It is the name of the place, and a reader who is already
+     * here does not need it advertised as somewhere to go. */
     & .m-brand {
-        font-weight: 650;
-        font-size: 1.05rem;
+        font-size: var(--m-text-lg);
+        font-weight: var(--m-weight-semi);
+        letter-spacing: -0.02em;
         color: var(--m-ink);
         text-decoration: none;
-        letter-spacing: -0.02em;
+        white-space: nowrap;
+        padding: var(--m-space-1) 0;
+
+        &:hover { color: var(--m-accent); }
     }
 
     & .m-me {
         display: flex;
         align-items: center;
-        gap: .5rem;
+        gap: var(--m-space-3);
         margin-left: auto;
         flex-wrap: wrap;
     }
-}
 
-.m-main {
-    width: min(100% - 2rem, var(--m-measure));
-    margin: 2rem auto;
-    flex: 1;
-}
+    & .m-main {
+        width: min(100% - var(--m-space-6), var(--m-measure));
+        margin-inline: auto;
+        padding-block: var(--m-space-6) var(--m-space-8);
+        flex: 1;
+        display: flow-root;
 
-.m-foot {
-    border-top: 1px solid var(--m-line);
-    padding: 1.5rem;
-    text-align: center;
-    color: var(--m-ink-faint);
-    font-size: .85rem;
-}
+        & > :first-child { margin-top: 0; }
+        & > :last-child { margin-bottom: 0; }
+    }
 
-/* **A skip link is invisible until it has the caret**, which is the whole of what it is for: the
- * first thing a keyboard meets on the page, and a way past thirty links in a header. */
-.m-skip {
-    position: absolute;
-    left: -9999px;
-    top: 0;
-    z-index: 30;
-    background: var(--m-accent);
-    color: var(--m-accent-ink);
-    padding: .5rem .9rem;
-    border-radius: 0 0 var(--m-radius) 0;
-    text-decoration: none;
+    & .m-foot {
+        border-top: 1px solid var(--m-line);
+        padding: var(--m-space-5) max(var(--m-space-4), calc((100% - var(--m-measure)) / 2));
+        color: var(--m-ink-faint);
+        font-size: var(--m-text-ui);
 
-    &:focus-visible { left: 0; }
+        & > :first-child { margin-top: 0; }
+        & > :last-child { margin-bottom: 0; }
+    }
+
+    /* **At a phone's width the header stops being a row.** The brand and the `nav` beside it keep
+     * the first line and everything else -- the search slot, whatever else was put there -- drops
+     * below and takes the whole width, which is the only way a field and an account menu fit across
+     * 320 pixels without either of them being forty pixels wide.
+     *
+     * It is done with `order` and moves nothing in the document: the caret still goes brand, search,
+     * nav, and the skip link is the first thing on the page either way. */
+    @media (width < 34rem) {
+        & .m-head {
+            padding-inline: var(--m-space-4);
+            gap: var(--m-space-2) var(--m-space-3);
+
+            & > *:not(.m-brand, .m-me) {
+                order: 1;
+                flex: 1 1 100%;
+            }
+        }
+
+        & .m-main { padding-block: var(--m-space-5) var(--m-space-7); }
+    }
 }

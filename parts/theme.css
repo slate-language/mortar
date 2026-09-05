@@ -5,30 +5,115 @@
  * owns is the subtree the components render into. An application that wants the whole viewport says
  * so in one rule of its own -- `body { margin: 0 }` and this element's `min-height` -- and the
  * README says which one.
+ *
+ * **IT IS ALSO WHERE THE THINGS TRUE OF EVERY COMPONENT ARE WRITTEN**: the base type, the heading
+ * ladder, what a link looks like, and the one focus ring. A component's own sheet then says only
+ * what is DIFFERENT about it.
+ *
+ * **THE BASE RULES ARE INSIDE `:where()` AND WEIGH NOTHING**, which is the whole reason they can be
+ * this thorough. A component that says a heading of its own is a different size, or that its link is
+ * ink rather than accent, simply says so and wins -- there is no `!important` anywhere in this
+ * library and no rule here that a component has to fight. The focus ring is the one exception and is
+ * written to win on purpose: a component may not quietly lose it.
  */
 
 .mortar {
     color: var(--m-ink);
     background: var(--m-paper);
-    font: 16px/1.6 var(--m-font);
+    font-family: var(--m-font);
+    font-size: var(--m-text-body);
+    line-height: var(--m-lead-ui);
     min-height: 100%;
+    -webkit-text-size-adjust: 100%;
 
     & *, & *::before, & *::after { box-sizing: border-box; }
 
-    & a {
+    /* **A link is the accent and an underline quieter than the text**, which is what keeps a
+     * paragraph with four links in it from reading as four interruptions. Hovering brings the
+     * underline up to full strength rather than changing the colour -- the colour already said it
+     * was a link. */
+    & :where(a) {
         color: var(--m-accent);
-        text-decoration-color: color-mix(in oklab, var(--m-accent) 35%, transparent);
-        text-underline-offset: 2px;
+        text-decoration-color: color-mix(in oklab, currentColor 30%, transparent);
+        text-underline-offset: .18em;
+        transition: color var(--m-quick) var(--m-ease),
+                    text-decoration-color var(--m-quick) var(--m-ease);
     }
 
-    & h1, & h2, & h3 { line-height: 1.25; letter-spacing: -0.01em; }
-    & h1 { font-size: 1.6rem; margin: 0 0 .25rem; }
-    & h2 { font-size: 1.15rem; margin: 1.5rem 0 .5rem; }
-    & h3 { font-size: 1rem; margin: 1rem 0 .35rem; }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-    .mortar a, .mortar button {
-        transition: background-color .12s ease, color .12s ease, border-color .12s ease;
+    & :where(a:hover) {
+        color: var(--m-accent-strong);
+        text-decoration-color: currentColor;
     }
+
+    & :where(a:active) { color: var(--m-accent-strong); }
+
+    /* **ONE FOCUS RING, ON EVERYTHING THAT CAN TAKE THE CARET.** A ring drawn per component is a
+     * ring forgotten on the next one; this is the whole library's. `outline` follows an element's
+     * own corners, so a pill is ringed as a pill and a field as a field, and it is drawn outside the
+     * box so nothing moves when it appears. */
+    & :is(a, button, input, textarea, select, summary, [tabindex]):focus-visible {
+        outline: var(--m-ring);
+        outline-offset: var(--m-ring-offset);
+    }
+
+    /* Selection in the accent, because a page has one accent and this is part of it. */
+    & ::selection {
+        background: var(--m-accent-soft);
+        color: var(--m-accent-strong);
+    }
+
+    /* THE HEADING LADDER: three sizes, tight leading, and a little negative tracking at the top and
+     * none at the bottom -- large type wants its letters pulled in and small type does not. */
+    & :where(h1, h2, h3, h4) {
+        line-height: var(--m-lead-tight);
+        font-weight: var(--m-weight-semi);
+        text-wrap: balance;
+    }
+
+    & :where(h1) {
+        font-size: var(--m-text-2xl);
+        letter-spacing: -0.021em;
+        margin: 0 0 var(--m-space-2);
+    }
+
+    & :where(h2) {
+        font-size: var(--m-text-xl);
+        letter-spacing: -0.014em;
+        margin: var(--m-space-6) 0 var(--m-space-2);
+    }
+
+    & :where(h3) {
+        font-size: var(--m-text-lg);
+        letter-spacing: -0.008em;
+        margin: var(--m-space-5) 0 var(--m-space-2);
+    }
+
+    & :where(h4) {
+        font-size: var(--m-text-body);
+        margin: var(--m-space-4) 0 var(--m-space-1);
+    }
+
+    & :where(p) { margin: var(--m-space-3) 0; }
+
+    & :where(small) { font-size: var(--m-text-sm); }
+
+    /* A number a reader compares against the number under it -- a reply count, a page, a status --
+     * lines up only if all its digits are one width. */
+    & :where(time, code, kbd, samp) { font-variant-numeric: tabular-nums; }
+
+    & :where(code, kbd, samp) {
+        font-family: var(--m-mono);
+        font-size: .9em;
+        background: var(--m-sunken);
+        border-radius: var(--m-radius-sm);
+        padding: .1em .35em;
+    }
+
+    & :where(hr) {
+        border: 0;
+        border-top: 1px solid var(--m-line);
+        margin: var(--m-space-6) 0;
+    }
+
+    & :where(img, svg, video) { max-width: 100%; }
 }

@@ -1,56 +1,99 @@
-/* What the page says while the reader is looking somewhere else. */
+/* What the page says while the reader is looking somewhere else.
+ *
+ * **`display: contents` on the region**, so a live region that exists for the whole life of the page
+ * costs the layout nothing and can be put wherever it belongs in the document order.
+ *
+ * **A TOAST IS THE ONE THING IN THIS LIBRARY THAT IS ALLOWED TO MOVE**, and it moves once, on its
+ * way in, because something appearing in the corner of the eye with no motion at all reads as a
+ * glitch. It comes from the edge it is pinned to, so the direction says where it came from. Under
+ * `prefers-reduced-motion` the duration token is zero and it simply arrives.
+ *
+ * **The tone is a rail and not a ground.** Filling a message with colour makes the text harder to
+ * read and makes three stacked messages a stack of colour; three millimetres of edge says the same
+ * thing and leaves the words alone.
+ */
 
 .m-live { display: contents; }
 
 .m-toasts {
     position: fixed;
-    inset-block-end: 1rem;
-    inset-inline-end: 1rem;
+    inset-block-end: var(--m-space-4);
+    inset-inline-end: var(--m-space-4);
     z-index: 20;
     display: flex;
     flex-direction: column;
-    gap: .5rem;
+    gap: var(--m-space-2);
     list-style: none;
     margin: 0;
     padding: 0;
-    max-width: min(24rem, calc(100vw - 2rem));
+    width: min(26rem, calc(100vw - var(--m-space-6)));
 
+    /* **Baseline and not top**, so the dismiss reads as sitting on the same line as the first line of
+     * the message however many lines the message turns out to be. */
     & .m-toast {
+        display: flex;
+        align-items: baseline;
+        gap: var(--m-space-3);
         background: var(--m-raised);
         color: var(--m-ink);
         border: 1px solid var(--m-line);
         border-left: 3px solid var(--m-ink-faint);
         border-radius: var(--m-radius);
-        box-shadow: var(--m-shadow);
-        padding: .6rem .8rem;
-        font-size: .9rem;
-        display: flex;
-        align-items: baseline;
-        gap: .6rem;
+        box-shadow: var(--m-shadow-lg);
+        padding: var(--m-space-3) var(--m-space-4);
+        font-size: var(--m-text-ui);
+        line-height: var(--m-lead-ui);
+        overflow-wrap: anywhere;
+        animation: m-toast-in var(--m-calm) var(--m-ease);
 
         &.good { border-left-color: var(--m-good); }
         &.danger { border-left-color: var(--m-danger); }
         &.info { border-left-color: var(--m-accent); }
+
+        & > span { min-width: 0; }
     }
 
+    /* The dismiss is a real target and not a piece of text: it is what a thumb has to hit. */
     & .m-dismiss {
         margin-inline-start: auto;
+        flex: none;
         font: inherit;
-        font-size: .8rem;
+        font-size: var(--m-text-sm);
+        font-weight: var(--m-weight-medium);
         border: 0;
+        border-radius: var(--m-radius-sm);
         background: none;
         color: var(--m-ink-faint);
+        padding: var(--m-space-1) var(--m-space-2);
+        margin-right: calc(var(--m-space-2) * -1);
         cursor: pointer;
+        transition: background-color var(--m-quick) var(--m-ease),
+                    color var(--m-quick) var(--m-ease);
 
-        &:hover { color: var(--m-accent); }
+        &:hover {
+            background: var(--m-sunken);
+            color: var(--m-ink);
+        }
+
+        &:active { background: color-mix(in oklab, var(--m-ink) 12%, transparent); }
     }
-}
 
-@media (prefers-reduced-motion: no-preference) {
-    .m-toasts .m-toast { animation: m-toast-in .18s ease-out; }
+    /* On a phone the stack is the width of the screen, less a margin. */
+    @media (width < 34rem) {
+        inset-inline: var(--m-space-3);
+        inset-block-end: var(--m-space-3);
+        width: auto;
+    }
 }
 
 @keyframes m-toast-in {
-    from { opacity: 0; transform: translateY(.4rem); }
-    to { opacity: 1; transform: none; }
+    from {
+        opacity: 0;
+        transform: translate3d(var(--m-space-5), 0, 0);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
 }

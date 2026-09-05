@@ -1,42 +1,71 @@
-/* The form itself, and the card it usually stands in. */
+/* The form itself, and the two shapes it takes that are not a column of fields.
+ *
+ * **A FORM IS A PANEL ONLY WHEN IT IS THE THING ON THE PAGE.** `class="card"` is the caller saying
+ * so: posting a reply is a surface of its own, and the four filters down the side of a list are not.
+ * The plain form is a column with nothing round it, which is what lets it sit inside a `Post` or a
+ * `Card` without a second border a millimetre inside the first.
+ */
 
 .m-form {
-    margin: 1.25rem 0;
+    margin-block: var(--m-space-5);
 
     &.card {
         background: var(--m-raised);
         border: 1px solid var(--m-line);
-        border-radius: var(--m-radius);
-        padding: 1.25rem 1.4rem;
-        box-shadow: var(--m-shadow);
+        border-radius: var(--m-radius-lg);
+        padding: var(--m-space-5) var(--m-space-5) var(--m-space-4);
+        box-shadow: var(--m-shadow-sm);
     }
 
     & > :first-child { margin-top: 0; }
     & > :last-child { margin-bottom: 0; }
 }
 
-/* A form with one button and no fields -- signing out, revoking a session, deleting a post. */
+/* A form with one button and no fields -- signing out, revoking a session, deleting a post. It is a
+ * form because it is a POST, and it should look like the button it holds and nothing else. */
 .m-doing {
     display: inline;
     margin: 0;
 }
 
+/* **A SEARCH BOX IN A HEADER IS A DIFFERENT CONTROL FROM A FIELD IN A FORM**, and this is the class
+ * that says so: one line, a pill on a sunken ground, and the label kept for a screen reader rather
+ * than printed over the box. A label above a search box in a header is a row of furniture on the one
+ * line of the page that has the least room for it.
+ *
+ * **It reaches into `Field`'s own class on purpose.** The alternative is a `search` prop on `Field`
+ * that exists only for this arrangement -- a component growing a mode because another component
+ * wanted one -- and the two are always rendered together. */
 .m-search {
     display: flex;
-    gap: .35rem;
-    flex: 1 1 12rem;
-    max-width: 22rem;
+    align-items: center;
+    flex: 1 1 14rem;
+    max-width: 26rem;
     margin: 0;
 
-    & input {
+    & .m-field {
         flex: 1;
         min-width: 0;
-        padding: .4rem .7rem;
-        border: 1px solid var(--m-line);
+        margin: 0;
+        gap: 0;
+    }
+
+    & .m-field label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+        border: 0;
+    }
+
+    & .m-field input {
         border-radius: var(--m-pill);
-        background: var(--m-paper);
-        color: inherit;
-        font: inherit;
-        font-size: .9rem;
+        background: var(--m-sunken);
+        padding: var(--m-space-2) var(--m-space-4);
+        font-size: var(--m-text-ui);
     }
 }

@@ -1,6 +1,6 @@
 {
     name: "mortar",
-    version: "0.1.0",
+    version: "0.2.0",
 
     // **One module, and that is the whole of the public surface.** `mortar.slx` declares every
     // component the library has; the files under `parts/` are where the bodies and the stylesheets

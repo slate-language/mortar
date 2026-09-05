@@ -1,17 +1,59 @@
-/* What went wrong, as the server said it. */
+/* What went wrong, as the server said it.
+ *
+ * **THE RAIL IS THE SAME DEVICE A REPLY USES AND MEANS THE SAME THING**: this is attached to what
+ * you just did. It is the danger colour and the ground is the danger tint, but the sentence itself
+ * is ordinary ink -- a paragraph set in red is a paragraph nobody finishes, and the reader has to
+ * read this one to find out what to fix.
+ *
+ * **The rows are a real list with real markers.** Four things wrong with a form is four things, and
+ * a reader counting them is the point.
+ */
 
 .m-problem {
-    border: 1px solid color-mix(in oklab, var(--m-danger) 45%, var(--m-line));
+    border: 1px solid color-mix(in oklab, var(--m-danger) 30%, var(--m-line));
+    border-left: 3px solid var(--m-danger);
     background: var(--m-danger-soft);
-    border-radius: 8px;
-    padding: .6rem .8rem;
-    margin: 0 0 1rem;
-    color: var(--m-danger);
-    font-size: .9rem;
+    border-radius: var(--m-radius);
+    padding: var(--m-space-4) var(--m-space-5);
+    margin-block: var(--m-space-5);
+    color: var(--m-ink);
+    font-size: var(--m-text-ui);
+    line-height: var(--m-lead-ui);
 
     & p { margin: 0; }
-    & .m-title { font-weight: 600; }
-    & ul { margin: .4rem 0 0; padding-left: 1.1rem; }
-    & li { margin: .15rem 0; }
-    & .m-status { color: var(--m-ink-faint); font-variant-numeric: tabular-nums; margin-left: .4rem; }
+
+    & .m-title {
+        font-weight: var(--m-weight-semi);
+        font-size: var(--m-text-body);
+        letter-spacing: -0.008em;
+        color: var(--m-danger);
+        margin-bottom: var(--m-space-1);
+    }
+
+    & ul {
+        margin: var(--m-space-3) 0 0;
+        padding-left: var(--m-space-4);
+        color: var(--m-ink-soft);
+    }
+
+    & li {
+        margin: var(--m-space-1) 0;
+
+        &::marker { color: var(--m-danger); }
+    }
+
+    /* **The status is for whoever is reporting this, not for whoever is reading it**, so it sits
+     * apart from the sentence and looks like the number it is. */
+    & .m-status {
+        display: inline-block;
+        margin-left: var(--m-space-2);
+        padding: 0 var(--m-space-2);
+        border-radius: var(--m-radius-sm);
+        background: color-mix(in oklab, var(--m-danger) 12%, transparent);
+        color: var(--m-danger);
+        font-family: var(--m-mono);
+        font-size: var(--m-text-xs);
+        font-variant-numeric: tabular-nums;
+        vertical-align: .08em;
+    }
 }

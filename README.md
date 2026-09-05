@@ -42,9 +42,9 @@ slate examples/page.slx
 
 | | |
 |---|---|
-| markup for that page | 3,955 bytes |
+| markup for that page | 3,977 bytes |
 | stylesheets on it | 16 |
-| whole answer | 20,327 bytes |
+| whole answer | 55,875 bytes, or 15,190 over the wire |
 
 **A page carries only what it rendered.** Each component brings its own sheet the first time it
 appears and never again, so a page with no `Toast` on it ships no toast css — which is what one
@@ -130,9 +130,48 @@ fragment, so `html(root)` is one self-contained string a template drops into a `
 them in the document's head. A hydrated page writes none of them, the server having already sent
 them.
 
-**There is no minifier, so a sheet ships as it was written, comments included.** That is about 3.6 KB
-of the library's 16.7 KB, and a page only carries the sheets of the components it actually rendered.
-Serve it compressed and it is not something to think about.
+**There is no minifier, so a sheet ships as it was written, comments included.** The library is
+53.5 KB of css and 23 KB of that is the comments — which is a decision rather than an oversight: a
+stylesheet here is meant to be read, and the paragraph saying *why* a reply is a rail rather than a
+card is worth more than the bytes it costs. A page carries only the sheets of the components it
+rendered, and the whole board above gzips to 15 KB. Serve it compressed and it is not something to
+think about; if it ever is, a minifier is one step in front of the file the compiler reads.
+
+## The look, and the four rules it comes from
+
+Everything a sheet in this library can say is a token in
+[`parts/tokens.css`](parts/tokens.css) — colour, a seven-step type scale, an eight-step space scale on
+a quarter-rem grid, four radii, three elevations, one focus ring, and two motion durations. No sheet
+writes a colour, a size or a duration of its own. Four rules decide what gets which.
+
+**A serif means a person is talking.** The interface — a label, a page number, a filter, a button —
+is set in the system's sans. A post's title and body, a thread's excerpt, and the textarea a reply is
+typed into are set in the system's serif, at a size and a measure meant to be read for a minute
+rather than glanced at for a second. It costs nothing to load: both faces are the ones the reader's
+own machine already has.
+
+**Elevation says what you are doing.** `Card` is flat, because a page shows twenty of them and twenty
+shadows is a texture rather than a hierarchy; `Post` is raised, because there is one of it; a form is
+a panel only when the caller says `class="card"`, meaning it is the thing on the page. A control is
+the other direction — a well cut into the surface, which comes up to the raised colour under the
+caret.
+
+**A rail means attached.** A reply hangs off the post above it on a two-pixel rail rather than
+sitting in a box of its own, a problem carries one in the danger colour, and a message in the corner
+carries one in its tone. Nothing else has one.
+
+**A pill is for choosing and a square corner is for doing.** Tags, segments and page numbers are
+fully round because each is one of a set you pick from; a button is not a member of anything and has
+a small square corner. `aria-current` is the only thing that says which choice is in force, so what
+a page looks like and what a screen reader is told cannot drift apart.
+
+Every text colour is checked against every ground it is written on, in both themes — 4.5:1 for the
+quiet ones and better than 7:1 for body text. Every interactive part has a hover, an active and,
+where it can be one, a disabled state, and one focus ring is drawn for all of them from
+`.mortar :is(a, button, input, textarea, select, summary, [tabindex]):focus-visible` rather than per
+component. **Every transition and animation takes its duration from one of two tokens**, and
+`prefers-reduced-motion: reduce` sets both to zero in one block — so a component written next year is
+covered before it is written.
 
 ## Theming, and why the theme is in the URL
 

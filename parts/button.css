@@ -1,46 +1,101 @@
-/* The one thing on the page that changes something. */
+/* The one thing on the page that changes something.
+ *
+ * **PILLS ARE FOR CHOOSING AND BUTTONS ARE FOR DOING**, and the corner is what says which. A tag, a
+ * segment and a page number are fully round because each is one of a set you pick from; a button has
+ * a small square corner because it is not a member of anything -- it is the end of the sentence the
+ * form was making. A reader can tell a filter from a submit across the room.
+ *
+ * **There are three variants and only one of them is filled.** A page with two filled buttons on it
+ * has told the reader nothing about which to press, so `primary` is the thing the form is for, and
+ * `quiet` and `danger` are ink on nothing until the pointer is over them.
+ *
+ * **Nothing here moves on press.** The ground darkens instead, which reads as pressed at any size
+ * and does not shift the row of buttons it is in.
+ *
+ * **Every hover is written `:hover:not(:disabled)`**, so a button that cannot be pressed does not
+ * light up under the pointer -- which is the commonest way a disabled control lies about itself.
+ */
 
 .m-button {
-    font: inherit;
-    font-weight: 550;
-    padding: .5rem 1.1rem;
-    border-radius: 8px;
-    border: 1px solid transparent;
-    cursor: pointer;
     display: inline-flex;
     align-items: center;
-    gap: .4rem;
+    justify-content: center;
+    gap: var(--m-space-2);
+    font: inherit;
+    font-size: var(--m-text-ui);
+    font-weight: var(--m-weight-semi);
+    line-height: 1.4;
+    letter-spacing: .002em;
+    padding: var(--m-space-2) var(--m-space-5);
+    min-height: 2.25rem;
+    border: 1px solid transparent;
+    border-radius: var(--m-radius-sm);
+    background: none;
+    color: var(--m-ink);
+    cursor: pointer;
+    transition: background-color var(--m-quick) var(--m-ease),
+                border-color var(--m-quick) var(--m-ease),
+                color var(--m-quick) var(--m-ease);
 
     &.primary {
         border-color: var(--m-accent);
         background: var(--m-accent);
         color: var(--m-accent-ink);
+        box-shadow: var(--m-shadow-sm);
 
-        &:hover { filter: brightness(1.08); }
+        &:hover:not(:disabled) {
+            background: var(--m-accent-strong);
+            border-color: var(--m-accent-strong);
+        }
+
+        &:active:not(:disabled) {
+            background: color-mix(in oklab, var(--m-accent-strong) 82%, var(--m-ink));
+        }
     }
 
     &.quiet {
-        background: none;
         color: var(--m-ink-soft);
-        font-size: .9rem;
-        padding: .3rem .55rem;
-        border-radius: var(--m-pill);
+        padding-inline: var(--m-space-3);
+        min-height: 2rem;
 
-        &:hover { background: var(--m-accent-soft); color: var(--m-accent); }
+        &:hover:not(:disabled) {
+            background: var(--m-sunken);
+            color: var(--m-ink);
+        }
+
+        &:active:not(:disabled) { background: color-mix(in oklab, var(--m-ink) 12%, transparent); }
     }
 
     &.danger {
-        background: none;
         color: var(--m-danger);
-        font-size: .9rem;
-        padding: .3rem .55rem;
-        border-radius: var(--m-pill);
+        padding-inline: var(--m-space-3);
+        min-height: 2rem;
 
-        &:hover { background: color-mix(in oklab, var(--m-danger) 12%, transparent); }
+        &:hover:not(:disabled) {
+            background: color-mix(in oklab, var(--m-danger) 12%, transparent);
+            border-color: color-mix(in oklab, var(--m-danger) 35%, transparent);
+        }
+
+        &:active:not(:disabled) {
+            background: color-mix(in oklab, var(--m-danger) 20%, transparent);
+        }
     }
 
-    &:focus-visible { outline: 2px solid var(--m-accent); outline-offset: 2px; }
-    &:disabled { opacity: .55; cursor: not-allowed; filter: none; }
+    /* **A disabled button keeps its shape and loses its weight**, so a form whose submit is not ready
+     * yet looks like the same form rather than a different one. */
+    &:disabled {
+        opacity: .5;
+        cursor: not-allowed;
+        box-shadow: none;
+    }
 }
 
-.m-do { margin: 1rem 0 0; }
+/* The row a form's buttons stand in. **The first one is the one the form is for**, and the rest sit
+ * beside it rather than under it, because a column of buttons is a column of decisions. */
+.m-do {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--m-space-3);
+    margin: var(--m-space-5) 0 0;
+}

@@ -1,39 +1,96 @@
-/* Something somebody wrote, with their name on it. */
+/* Something somebody wrote, with their name on it.
+ *
+ * **THIS IS THE ONE SURFACE IN THE LIBRARY THAT IS REALLY RAISED**, and it can be, because a page
+ * has one of it. A title, a byline, the tags and then the writing -- set in the serif, at a size
+ * meant for reading rather than scanning, and cut to a line length a person can come back from.
+ *
+ * **A REPLY IS NOT A SMALLER CARD, IT IS A RAIL.** Giving a reply the same box as the thing it is
+ * answering says they are two of a kind; a rail down its left edge and an indent under the post says
+ * what is actually true -- that it hangs off it. It costs no surface, so a thread of forty replies
+ * is forty pieces of writing and not forty boxes.
+ */
 
 .m-post {
     background: var(--m-raised);
     border: 1px solid var(--m-line);
-    border-radius: var(--m-radius);
-    padding: 1.25rem 1.4rem;
+    border-radius: var(--m-radius-lg);
+    padding: var(--m-space-6) var(--m-space-6) var(--m-space-5);
+    margin-block: var(--m-space-5);
     box-shadow: var(--m-shadow);
 
     & > :first-child { margin-top: 0; }
     & > :last-child { margin-bottom: 0; }
+
+    /* The title of the thing itself, in the reading face. */
+    & :is(h1, h2, h3) {
+        font-family: var(--m-read);
+        font-weight: var(--m-weight-semi);
+        letter-spacing: -0.015em;
+        line-height: 1.18;
+        margin: 0;
+        max-width: 24em;
+        text-wrap: balance;
+    }
+
+    & h1 { font-size: var(--m-text-2xl); }
+    & h2 { font-size: var(--m-text-xl); }
+    & h3 { font-size: var(--m-text-lg); }
+
+    & .m-byline { margin: var(--m-space-3) 0 0; }
+    & .m-tags { margin: var(--m-space-3) 0 0; }
+
+    & .m-said {
+        font-size: var(--m-text-lg);
+        line-height: var(--m-lead-read);
+        margin-block: var(--m-space-5);
+    }
+
+    @media (width < 34rem) {
+        padding: var(--m-space-5) var(--m-space-4) var(--m-space-4);
+    }
 }
 
 /* **`pre-wrap` and `anywhere`, which is what a person's own line breaks and somebody's unbroken
  * 400-character URL each need.** Without the second a paste widens the whole card and the page
- * scrolls sideways. */
+ * scrolls sideways.
+ *
+ * **The serif is the point of it.** Everything else on a board is the software talking -- a page
+ * number, a filter, a label on a field. This is the one place a person is, and it is set to be read
+ * for a minute rather than glanced at for a second. */
 .m-said {
+    font-family: var(--m-read);
+    font-size: var(--m-text-body);
+    line-height: var(--m-lead-read);
+    color: var(--m-ink);
+    max-width: var(--m-prose);
     white-space: pre-wrap;
     overflow-wrap: anywhere;
-    margin: .75rem 0;
+    margin-block: var(--m-space-4);
 }
 
+/* The replies under a post: indented, so the column itself says what they are answering. */
 .m-posts {
     list-style: none;
-    margin: 0;
-    padding: 0;
+    margin-block: var(--m-space-5);
+    padding: 0 0 0 var(--m-space-5);
     display: flex;
     flex-direction: column;
-    gap: .6rem;
+    gap: var(--m-space-5);
+
+    @media (width < 34rem) { padding-left: var(--m-space-2); }
 }
 
 .m-reply {
-    background: var(--m-raised);
-    border: 1px solid var(--m-line);
-    border-radius: var(--m-radius);
-    padding: .8rem 1rem;
+    border-left: 2px solid color-mix(in oklab, var(--m-accent) 22%, var(--m-line));
+    padding: var(--m-space-1) 0 var(--m-space-1) var(--m-space-4);
+    margin-block: var(--m-space-4);
 
-    & .m-said { margin: .35rem 0 0; }
+    & > :first-child { margin-top: 0; }
+    & > :last-child { margin-bottom: 0; }
+
+    & .m-byline { margin: 0; }
+
+    & .m-said { margin: var(--m-space-2) 0 0; }
+
+    @media (width < 34rem) { padding-left: var(--m-space-3); }
 }

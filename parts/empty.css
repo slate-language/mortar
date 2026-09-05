@@ -1,13 +1,43 @@
-/* What a list says when there is nothing in it. */
+/* What a list says when there is nothing in it.
+ *
+ * **AN EMPTY LIST IS A STATE AND HAS TO LOOK LIKE ONE.** A dashed outline over a sunken ground says
+ * *a thing goes here and there is nothing in it yet* -- the same thing an empty frame on a wall
+ * says -- where a plain sentence in the middle of a page reads as something that failed to load.
+ *
+ * **It is quiet on purpose.** The loudest thing in it is whatever the caller passed as children,
+ * which is the button that fills it.
+ */
 
 .m-empty {
-    border: 1px dashed var(--m-line);
-    border-radius: var(--m-radius);
-    padding: 2rem 1.25rem;
+    border: 1px dashed color-mix(in oklab, var(--m-line) 85%, var(--m-ink-faint));
+    border-radius: var(--m-radius-lg);
+    background: color-mix(in oklab, var(--m-sunken) 55%, transparent);
+    padding: var(--m-space-7) var(--m-space-5);
+    margin-block: var(--m-space-5);
     text-align: center;
     color: var(--m-ink-soft);
 
-    & h2 { margin: 0 0 .35rem; font-size: 1.05rem; color: var(--m-ink); }
-    & p { margin: 0; color: var(--m-ink-faint); }
-    & .m-do { margin-top: 1rem; }
+    & h2 {
+        margin: 0;
+        font-size: var(--m-text-lg);
+        font-weight: var(--m-weight-semi);
+        letter-spacing: -0.012em;
+        color: var(--m-ink);
+    }
+
+    /* **The detail is an instruction and not a caption**, so it is ink-soft: a reader is meant to act
+     * on it, and it is the only sentence in the box. */
+    & p {
+        margin: var(--m-space-2) auto 0;
+        max-width: 44ch;
+        color: var(--m-ink-soft);
+        font-size: var(--m-text-ui);
+        text-wrap: pretty;
+    }
+
+    & .m-do {
+        justify-content: center;
+        margin-top: var(--m-space-5);
+        max-width: none;
+    }
 }

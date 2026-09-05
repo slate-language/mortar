@@ -1,44 +1,95 @@
-/* A raised surface, and the one a list of threads is made of. */
+/* A raised surface, and the one a list of threads is made of.
+ *
+ * **A CARD IS A SCANNING SURFACE AND A POST IS A READING ONE, AND THEY ARE NOT THE SAME BOX.** This
+ * one is flat -- a hairline and the faintest lift -- because a page shows twenty of them and twenty
+ * shadows is a texture rather than a hierarchy. `Post` is the one that is raised, and it is raised
+ * because there is one of it.
+ *
+ * **The title is set in the interface's sans and a post's is set in the serif**, for the same
+ * reason: this is a label on something you might open, and that is the thing itself.
+ */
 
 .m-card {
     background: var(--m-raised);
     border: 1px solid var(--m-line);
     border-radius: var(--m-radius);
-    padding: 1rem 1.1rem;
-    box-shadow: var(--m-shadow);
+    padding: var(--m-space-4) var(--m-space-5);
+    margin-block: var(--m-space-5);
+    box-shadow: var(--m-shadow-sm);
 
     & > :first-child { margin-top: 0; }
     & > :last-child { margin-bottom: 0; }
 
     & .m-card-title {
         margin: 0;
-        font-size: 1.1rem;
+        font-family: var(--m-font);
+        font-size: var(--m-text-lg);
+        font-weight: var(--m-weight-semi);
+        letter-spacing: -0.014em;
+        line-height: var(--m-lead-tight);
 
         & a {
             color: var(--m-ink);
             text-decoration: none;
 
-            &:hover { color: var(--m-accent); }
+            &:hover {
+                color: var(--m-accent);
+                text-decoration: underline;
+                text-decoration-color: color-mix(in oklab, currentColor 40%, transparent);
+            }
         }
     }
 }
 
+/* **One discussion in a list of them**, which is a card that is also a row: tighter than the plain
+ * surface, and answering the pointer, because the whole of it is about somewhere you can go.
+ *
+ * The response is a border and a lift and not a movement. A list of rows that each slide a pixel
+ * under the pointer is a list that never sits still. */
 .m-thread-card {
-    & .m-excerpt { color: var(--m-ink-soft); margin: .4rem 0; }
+    padding: var(--m-space-4) var(--m-space-5) var(--m-space-3);
+    margin-block: 0;
+    transition: border-color var(--m-quick) var(--m-ease),
+                box-shadow var(--m-quick) var(--m-ease);
+
+    &:hover, &:focus-within {
+        border-color: color-mix(in oklab, var(--m-accent) 40%, var(--m-line));
+        box-shadow: var(--m-shadow);
+    }
+
+    & .m-byline { margin: var(--m-space-2) 0 0; }
+
+    /* **A person's own words, set in the serif and cut to a reading measure.** An excerpt is the only
+     * thing in a card that is not the software talking about the thread. */
+    & .m-excerpt {
+        font-family: var(--m-read);
+        font-size: var(--m-text-body);
+        line-height: var(--m-lead-read);
+        color: var(--m-ink-soft);
+        max-width: var(--m-prose);
+        margin: var(--m-space-3) 0;
+        overflow-wrap: anywhere;
+    }
+
+    & .m-tags { margin: var(--m-space-3) 0 0; }
 
     & .m-replies {
-        margin: .4rem 0 0;
-        font-size: .85rem;
+        margin: var(--m-space-3) 0 0;
+        padding-top: var(--m-space-2);
+        border-top: 1px solid var(--m-line-soft);
+        font-size: var(--m-text-xs);
         color: var(--m-ink-faint);
         font-variant-numeric: tabular-nums;
+        letter-spacing: .01em;
     }
 }
 
+/* A list of cards, so the gap between them is the library's answer and not every page's. */
 .m-cards {
     list-style: none;
-    margin: 0;
+    margin-block: var(--m-space-5);
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: .75rem;
+    gap: var(--m-space-3);
 }

@@ -1,28 +1,63 @@
-/* A row of choices where exactly one is in force. */
+/* A row of choices where exactly one is in force.
+ *
+ * **IT IS ONE TRACK AND NOT A ROW OF LOOSE PILLS.** The choices sit in a single sunken groove with a
+ * hairline round it, and the one in force is a raised chip inside it -- so the control reads as one
+ * thing with a state, which is what it is, rather than as several things that happen to be adjacent.
+ * That is also what makes it survive wrapping: a second line of a track is still obviously the same
+ * track.
+ *
+ * **`aria-current` is the only thing that says which is chosen**, so the look cannot drift from what
+ * a reader is told. There is no `.selected` class here to forget.
+ */
 
 .m-segmented {
-    display: flex;
+    display: inline-flex;
     flex-wrap: wrap;
-    gap: .35rem;
+    gap: var(--m-space-1);
     list-style: none;
     margin: 0;
-    padding: 0;
+    padding: var(--m-space-1);
+    max-width: 100%;
+    border: 1px solid var(--m-line);
+    border-radius: var(--m-pill);
+    background: var(--m-sunken);
+    vertical-align: middle;
 
     & .m-seg {
         display: inline-block;
-        padding: .25rem .6rem;
+        padding: var(--m-space-1) var(--m-space-4);
         border-radius: var(--m-pill);
-        font-size: .85rem;
+        font-size: var(--m-text-ui);
+        font-weight: var(--m-weight-medium);
+        line-height: 1.6;
         text-decoration: none;
         color: var(--m-ink-soft);
-        border: 1px solid transparent;
+        white-space: nowrap;
+        transition: background-color var(--m-quick) var(--m-ease),
+                    color var(--m-quick) var(--m-ease),
+                    box-shadow var(--m-quick) var(--m-ease);
 
-        &:hover { border-color: var(--m-line); }
-
-        &[aria-current] {
-            background: var(--m-accent-soft);
-            color: var(--m-accent);
-            border-color: var(--m-accent);
+        &:hover {
+            color: var(--m-ink);
+            background: color-mix(in oklab, var(--m-raised) 60%, transparent);
+            text-decoration: none;
         }
+
+        &:active { background: color-mix(in oklab, var(--m-ink) 8%, transparent); }
+
+        /* The chip that is in force: raised out of the groove rather than tinted inside it. */
+        &[aria-current] {
+            background: var(--m-raised);
+            color: var(--m-accent);
+            font-weight: var(--m-weight-semi);
+            box-shadow: var(--m-shadow-sm),
+                        0 0 0 1px color-mix(in oklab, var(--m-accent) 30%, var(--m-line));
+        }
+
+        /* A choice with nowhere to go -- the one already in force, on a page with no handler. */
+        &.m-off { color: var(--m-ink-faint); }
     }
 }
+
+/* The sort order sits on its own line above the list it orders, so it has room under it. */
+.m-sorts { margin-block: var(--m-space-4) 0; }

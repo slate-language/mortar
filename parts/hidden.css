@@ -2,6 +2,9 @@
  *
  * **`clip-path` and not `display: none`.** A hidden element is not announced at all, and the whole
  * point of this one is to be announced -- so it stays in the layout at one pixel, out of the way.
+ *
+ * **Nothing here is a token**, and that is deliberate: these nine declarations are a mechanism
+ * rather than a look, and a theme that could change any of them could break it.
  */
 
 .m-hidden {

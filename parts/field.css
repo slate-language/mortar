@@ -1,42 +1,126 @@
-/* One labelled control, with whatever is wrong with it underneath. */
+/* One labelled control, with whatever is wrong with it underneath.
+ *
+ * **A CONTROL IS A WELL CUT INTO THE PAGE, NOT A BOX SITTING ON IT.** The ground is the sunken
+ * colour and it comes UP to the raised one on focus, so the field the caret is in is the lightest
+ * thing on the surface and the ones it is not are quietly recessed. It costs one declaration and it
+ * is the whole of what a person needs to see while filling a form in.
+ *
+ * **A TEXTAREA IS SET IN THE READING FACE**, because what goes into it is a person's writing and it
+ * is about to be published in that face by `Post`. Typing a reply in the serif it will appear in is
+ * a small thing that makes a board feel like it was made by somebody.
+ *
+ * **The error is above the hint and both are wired with `aria-describedby`.** The order is the
+ * component's and the look is here: what went wrong is louder than what to do, and the field itself
+ * carries `aria-invalid`, which is what colours its edge.
+ */
 
 .m-field {
     display: flex;
     flex-direction: column;
-    gap: .3rem;
-    margin: 0 0 .9rem;
+    gap: var(--m-space-2);
+    margin-block: 0 var(--m-space-4);
 
     & label {
-        font-size: .85rem;
+        font-size: var(--m-text-sm);
+        font-weight: var(--m-weight-medium);
         color: var(--m-ink-soft);
-        font-weight: 550;
+        letter-spacing: .002em;
     }
 
-    & input, & textarea, & select {
-        font: inherit;
-        color: inherit;
-        background: var(--m-paper);
-        border: 1px solid var(--m-line);
-        border-radius: 8px;
-        padding: .5rem .65rem;
-        width: 100%;
-        resize: vertical;
+    /* A field that has to be filled in says so where the label is, in the colour of the sentence it
+     * will produce if it is not. */
+    &:has(:required) > label::after {
+        content: " *";
+        color: var(--m-danger);
+        font-weight: var(--m-weight-bold);
+    }
 
-        &:focus-visible {
-            outline: 2px solid var(--m-accent);
-            outline-offset: 1px;
+    & :is(input, textarea, select) {
+        font: inherit;
+        font-size: var(--m-text-body);
+        color: var(--m-ink);
+        background: var(--m-sunken);
+        border: 1px solid var(--m-line);
+        border-radius: var(--m-radius-sm);
+        padding: var(--m-space-2) var(--m-space-3);
+        width: 100%;
+        transition: background-color var(--m-quick) var(--m-ease),
+                    border-color var(--m-quick) var(--m-ease);
+
+        &::placeholder {
+            color: var(--m-ink-faint);
+            opacity: 1;
+        }
+
+        &:hover { border-color: color-mix(in oklab, var(--m-ink) 22%, var(--m-line)); }
+
+        &:focus {
+            background: var(--m-raised);
             border-color: var(--m-accent);
         }
 
-        &[aria-invalid="true"] { border-color: var(--m-danger); }
+        &[aria-invalid="true"] {
+            border-color: var(--m-danger);
+            background: color-mix(in oklab, var(--m-danger-soft) 70%, var(--m-sunken));
+        }
+
+        &:disabled {
+            opacity: .55;
+            cursor: not-allowed;
+            background: var(--m-sunken);
+        }
     }
 
+    & textarea {
+        font-family: var(--m-read);
+        font-size: var(--m-text-lg);
+        line-height: var(--m-lead-read);
+        padding: var(--m-space-3);
+        resize: vertical;
+        min-height: 6rem;
+    }
+
+    /* **A file input is drawn as the place a file is dropped**, which is what it is: a dashed well
+     * with the browser's own button turned into one of ours. */
     & input[type="file"] {
-        padding: .4rem;
+        padding: var(--m-space-3);
         background: none;
         border-style: dashed;
+        font-size: var(--m-text-ui);
+        color: var(--m-ink-soft);
+        cursor: pointer;
+
+        &::file-selector-button {
+            font: inherit;
+            font-weight: var(--m-weight-medium);
+            margin-right: var(--m-space-3);
+            padding: var(--m-space-1) var(--m-space-3);
+            border: 1px solid var(--m-line);
+            border-radius: var(--m-pill);
+            background: var(--m-sunken);
+            color: var(--m-ink);
+            cursor: pointer;
+            transition: background-color var(--m-quick) var(--m-ease),
+                        border-color var(--m-quick) var(--m-ease);
+        }
+
+        &:hover::file-selector-button {
+            background: var(--m-accent-soft);
+            border-color: color-mix(in oklab, var(--m-accent) 45%, var(--m-line));
+            color: var(--m-accent);
+        }
     }
 
-    & .m-hint { font-size: .8rem; color: var(--m-ink-faint); }
-    & .m-error { font-size: .8rem; color: var(--m-danger); }
+    & .m-hint {
+        font-size: var(--m-text-sm);
+        color: var(--m-ink-faint);
+        text-wrap: pretty;
+    }
+
+    & .m-error {
+        font-size: var(--m-text-sm);
+        font-weight: var(--m-weight-medium);
+        color: var(--m-danger);
+        text-wrap: pretty;
+    }
 }

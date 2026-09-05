@@ -1,25 +1,80 @@
-/* Page numbers, which is what LIMIT and OFFSET look like to a person. */
+/* Page numbers, which is what LIMIT and OFFSET look like to a person.
+ *
+ * **THE TWO STEPS ARE TARGETS AND THE MIDDLE IS A FACT.** *previous* and *next* are drawn as
+ * something to press -- a bordered pill with a real amount of padding, because on a phone they are
+ * hit with a thumb -- and *page 2 of 3, 45 threads* is set as text, tabular, so it does not shift
+ * as the numbers get wider.
+ *
+ * **A step with nowhere to go loses its border rather than greying out inside it.** It is a
+ * `<span>` and not a disabled link, so it should not look like a button that has stopped working;
+ * it should look like there is nothing there.
+ */
 
 .m-pager {
     display: flex;
     align-items: center;
-    gap: var(--m-gap);
-    margin: 1.5rem 0;
-    font-size: .9rem;
+    gap: var(--m-space-3);
+    flex-wrap: wrap;
+    margin-block: var(--m-space-6);
+    font-size: var(--m-text-ui);
 
     & .m-step {
+        display: inline-flex;
+        align-items: center;
+        padding: var(--m-space-2) var(--m-space-4);
+        border: 1px solid var(--m-line);
+        border-radius: var(--m-pill);
+        background: var(--m-raised);
         color: var(--m-accent);
+        font-weight: var(--m-weight-medium);
         text-decoration: none;
+        transition: background-color var(--m-quick) var(--m-ease),
+                    border-color var(--m-quick) var(--m-ease),
+                    color var(--m-quick) var(--m-ease);
 
-        &.m-off { color: var(--m-ink-faint); }
+        &:hover {
+            background: var(--m-accent-soft);
+            border-color: color-mix(in oklab, var(--m-accent) 45%, var(--m-line));
+            color: var(--m-accent-strong);
+            text-decoration: none;
+        }
+
+        &:active { background: color-mix(in oklab, var(--m-accent) 18%, transparent); }
+
+        &.m-off {
+            border-color: transparent;
+            background: none;
+            color: var(--m-ink-faint);
+        }
     }
 
     & .m-where {
-        margin-left: auto;
-        margin-right: auto;
+        margin-inline: auto;
         color: var(--m-ink-soft);
         font-variant-numeric: tabular-nums;
+        text-align: center;
     }
 
-    & .m-total { margin-left: .6rem; color: var(--m-ink-faint); }
+    & .m-total {
+        margin-left: var(--m-space-3);
+        color: var(--m-ink-faint);
+        font-size: var(--m-text-sm);
+    }
+
+    /* At a phone's width the count goes UNDER the two steps rather than between them, where there is
+     * no room for any of the three. The query is nested inside the rule it changes, which is what
+     * keeps everything this component says about itself in one place -- and keeps its class name
+     * appearing exactly once in its own sheet. */
+    @media (width < 30rem) {
+        justify-content: space-between;
+
+        & .m-where {
+            order: 1;
+            flex: 1 1 100%;
+            margin-inline: 0;
+            text-align: left;
+        }
+
+        & .m-total { margin-left: var(--m-space-2); }
+    }
 }

@@ -1,77 +1,211 @@
-/* The design tokens, and the only place in mortar a colour is written down.
+/* The design tokens: colour, type, space, radius, elevation and motion, and the only place in mortar
+ * any of them is written down.
  *
  * **Every other sheet in this package is `var(--m-…)` and nothing else**, which is what makes a
  * theme one block of declarations rather than a second copy of every rule. `[data-theme="dark"]`
  * re-declares the same names on the element `Theme` renders, and everything under it follows --
  * there is no `.dark` variant of a card, and nothing can be dark in one place and light in another.
  *
- * **The `:root` block is what makes a single component work on its own.** An `<Avatar/>` rendered
- * with no `Theme` above it still has the names it needs; the `[data-theme]` blocks are an override
- * for a subtree and both of them are written, so a light island inside a dark page is a `Theme` and
- * not a special case.
+ * **The `:root` block is what makes a single component work on its own.** A component rendered with
+ * no `Theme` above it still has the names it needs; the `[data-theme]` blocks are an override for a
+ * subtree and both of them are written, so a light island inside a dark page is a `Theme` and not a
+ * special case.
  *
  * **`color-scheme` travels with the tokens**, so the browser's own furniture -- a scrollbar, a form
  * control's default, the canvas behind a `<dialog>` -- turns over with the page rather than staying
  * light inside a dark one.
+ *
+ * THE THREE THINGS THIS PALETTE ENCODES, so that a new component has somewhere to look:
+ *
+ * | | |
+ * |---|---|
+ * | `ink`, `ink-soft`, `ink-faint` | how loud a piece of text is: what it says, who said it, when |
+ * | `paper`, `raised`, `sunken` | where a surface sits: the page, a thing on it, a well cut into it |
+ * | `accent`, `danger`, `good` | each with a `-soft` ground and, where it is filled, an `-ink` |
+ *
+ * **Every text colour here is checked against every ground it is written on**, at 4.5:1 for the
+ * quiet ones and better than 7:1 for body text, in both themes. `ink-faint` is the tightest and is
+ * the one to re-check if a paper is ever made lighter.
  */
 
 :root {
-    --m-ink: #16181d;
-    --m-ink-soft: #5a616e;
-    --m-ink-faint: #8d94a3;
-    --m-paper: #fbfbfd;
-    --m-raised: #ffffff;
-    --m-line: #e2e5ec;
-    --m-accent: #2f5de0;
-    --m-accent-soft: #eaefff;
-    --m-accent-ink: #ffffff;
-    --m-danger: #b3261e;
-    --m-danger-soft: #fdeceb;
-    --m-good: #1f7a4d;
-    --m-shadow: 0 1px 2px rgb(20 24 33 / 6%), 0 6px 20px rgb(20 24 33 / 5%);
+    /* Text, loudest to quietest. */
+    --m-ink: #1a1c21;
+    --m-ink-soft: #4f545e;
+    --m-ink-faint: #6b707b;
 
-    --m-gap: 1rem;
-    --m-radius: 10px;
-    --m-pill: 999px;
-    --m-measure: 46rem;
-    --m-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    --m-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+    /* Surfaces. `sunken` is a well -- an input, a search box, something cut into the page. */
+    --m-paper: #f5f5f2;
+    --m-raised: #ffffff;
+    --m-sunken: #edede9;
+
+    /* Hairlines. `line` divides, `line-soft` only suggests. */
+    --m-line: #dcdad4;
+    --m-line-soft: #e9e7e1;
+
+    /* The one saturated colour in the library, and the three states it is used in. */
+    --m-accent: #3b3a9c;
+    --m-accent-strong: #2b2a78;
+    --m-accent-soft: #ebeafb;
+    --m-accent-ink: #ffffff;
+
+    --m-danger: #a3201a;
+    --m-danger-soft: #fbeceb;
+    --m-danger-ink: #ffffff;
+
+    --m-good: #16653f;
+    --m-good-soft: #e9f5ee;
+
+    /* Elevation. Three steps and no more: a hairline, a thing on the page, a thing over it. */
+    --m-shadow-sm: 0 1px 2px rgb(20 22 28 / 5%);
+    --m-shadow: 0 1px 2px rgb(20 22 28 / 5%), 0 8px 24px -8px rgb(20 22 28 / 12%);
+    --m-shadow-lg: 0 2px 4px rgb(20 22 28 / 6%), 0 18px 44px -12px rgb(20 22 28 / 22%);
 
     color-scheme: light;
 }
 
 [data-theme="light"] {
-    --m-ink: #16181d;
-    --m-ink-soft: #5a616e;
-    --m-ink-faint: #8d94a3;
-    --m-paper: #fbfbfd;
+    --m-ink: #1a1c21;
+    --m-ink-soft: #4f545e;
+    --m-ink-faint: #6b707b;
+
+    --m-paper: #f5f5f2;
     --m-raised: #ffffff;
-    --m-line: #e2e5ec;
-    --m-accent: #2f5de0;
-    --m-accent-soft: #eaefff;
+    --m-sunken: #edede9;
+
+    --m-line: #dcdad4;
+    --m-line-soft: #e9e7e1;
+
+    --m-accent: #3b3a9c;
+    --m-accent-strong: #2b2a78;
+    --m-accent-soft: #ebeafb;
     --m-accent-ink: #ffffff;
-    --m-danger: #b3261e;
-    --m-danger-soft: #fdeceb;
-    --m-good: #1f7a4d;
-    --m-shadow: 0 1px 2px rgb(20 24 33 / 6%), 0 6px 20px rgb(20 24 33 / 5%);
+
+    --m-danger: #a3201a;
+    --m-danger-soft: #fbeceb;
+    --m-danger-ink: #ffffff;
+
+    --m-good: #16653f;
+    --m-good-soft: #e9f5ee;
+
+    --m-shadow-sm: 0 1px 2px rgb(20 22 28 / 5%);
+    --m-shadow: 0 1px 2px rgb(20 22 28 / 5%), 0 8px 24px -8px rgb(20 22 28 / 12%);
+    --m-shadow-lg: 0 2px 4px rgb(20 22 28 / 6%), 0 18px 44px -12px rgb(20 22 28 / 22%);
 
     color-scheme: light;
 }
 
+/* **The dark theme is not the light one inverted.** A raised surface is LIGHTER than the page here
+ * and darker than it there, because that is which way light falls in each; and the accent moves to
+ * the pale end of its own hue, because a colour that carries text on a dark ground has to. */
 [data-theme="dark"] {
-    --m-ink: #e9ecf2;
-    --m-ink-soft: #a6adbb;
-    --m-ink-faint: #767e8d;
-    --m-paper: #12141a;
-    --m-raised: #191c24;
-    --m-line: #2a2f3a;
-    --m-accent: #8aa6ff;
-    --m-accent-soft: #1d2540;
-    --m-accent-ink: #0d1120;
-    --m-danger: #ef8a80;
-    --m-danger-soft: #2a1a1a;
-    --m-good: #6fd39f;
-    --m-shadow: 0 1px 2px rgb(0 0 0 / 40%), 0 6px 20px rgb(0 0 0 / 30%);
+    --m-ink: #e7e8ec;
+    --m-ink-soft: #a7adb8;
+    --m-ink-faint: #828997;
+
+    --m-paper: #131419;
+    --m-raised: #1a1c22;
+    --m-sunken: #0e0f13;
+
+    --m-line: #2c2f37;
+    --m-line-soft: #23262d;
+
+    --m-accent: #a9a5ff;
+    --m-accent-strong: #c8c5ff;
+    --m-accent-soft: #23214a;
+    --m-accent-ink: #15132f;
+
+    --m-danger: #f0918a;
+    --m-danger-soft: #2b1a19;
+    --m-danger-ink: #16090a;
+
+    --m-good: #6fd3a3;
+    --m-good-soft: #16281f;
+
+    --m-shadow-sm: 0 1px 2px rgb(0 0 0 / 40%);
+    --m-shadow: 0 1px 2px rgb(0 0 0 / 45%), 0 8px 24px -8px rgb(0 0 0 / 55%);
+    --m-shadow-lg: 0 2px 4px rgb(0 0 0 / 50%), 0 18px 44px -12px rgb(0 0 0 / 70%);
 
     color-scheme: dark;
+}
+
+/* THE REST OF THE SYSTEM DOES NOT TURN OVER WITH THE THEME, so it is written once.
+ *
+ * A theme changes what a thing is made of and never how big it is: a dark card has the same padding,
+ * the same corner and the same rhythm as a light one, and a token that appeared in all three blocks
+ * above would be three chances to make them disagree. */
+:root, [data-theme] {
+    /* **Two families, and they mean different things.** The sans is the software talking -- a label,
+     * a button, a page number. The serif is a PERSON talking, and it is what a post's body and a
+     * thread's excerpt are set in. Both are the system's own; there is nothing to fetch. */
+    --m-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Inter, sans-serif;
+    --m-read: ui-serif, Charter, "Iowan Old Style", Georgia, "Times New Roman", serif;
+    --m-mono: ui-monospace, SFMono-Regular, Menlo, "Cascadia Mono", monospace;
+
+    /* The type scale: a fifth-of-a-step ladder from a 16px body, named for what reads at each size
+     * rather than for where it sits in the list. */
+    --m-text-xs: .75rem;
+    --m-text-sm: .8125rem;
+    --m-text-ui: .9375rem;
+    --m-text-body: 1rem;
+    --m-text-lg: 1.125rem;
+    --m-text-xl: 1.375rem;
+    --m-text-2xl: 1.75rem;
+
+    --m-lead-tight: 1.2;
+    --m-lead-ui: 1.5;
+    --m-lead-read: 1.65;
+
+    --m-weight-normal: 400;
+    --m-weight-medium: 500;
+    --m-weight-semi: 600;
+    --m-weight-bold: 700;
+
+    /* **A reading column is measured in characters and a page in rem**, which is why there are two:
+     * `measure` is how wide the shell is and `prose` is how long a line of somebody's writing may
+     * get inside it. */
+    --m-measure: 48rem;
+    --m-prose: 64ch;
+
+    /* Space, on a quarter-rem grid. Nothing in this library invents a gap. */
+    --m-space-1: .25rem;
+    --m-space-2: .5rem;
+    --m-space-3: .75rem;
+    --m-space-4: 1rem;
+    --m-space-5: 1.5rem;
+    --m-space-6: 2rem;
+    --m-space-7: 3rem;
+    --m-space-8: 4rem;
+    --m-gap: var(--m-space-4);
+
+    /* Corners. `sm` is for something you type into, the middle one for a surface, `lg` for the one
+     * surface a page is reading, and `pill` for a thing you choose. */
+    --m-radius-sm: 6px;
+    --m-radius: 10px;
+    --m-radius-lg: 14px;
+    --m-pill: 999px;
+
+    /* **One focus ring for the whole library**, so that a caret moving across a page does not change
+     * shape as it goes. */
+    --m-ring: 2px solid var(--m-accent);
+    --m-ring-offset: 2px;
+
+    /* Motion. Two durations and one curve; see the reduced-motion block at the foot of this file. */
+    --m-quick: 110ms;
+    --m-calm: 220ms;
+    --m-ease: cubic-bezier(.2, .7, .3, 1);
+}
+
+/* **REDUCED MOTION IS ONE BLOCK BECAUSE MOTION IS ONE TOKEN.** Every transition and every animation
+ * in this library takes its duration from `--m-quick` or `--m-calm`, so setting both to zero here
+ * stops all of it at once -- and a component added later is covered before it is written, which a
+ * per-sheet `@media` query could never promise.
+ *
+ * It stands after the theme blocks deliberately: the two selectors have the same weight, so the last
+ * one is the one that wins. */
+@media (prefers-reduced-motion: reduce) {
+    :root, [data-theme] {
+        --m-quick: 0ms;
+        --m-calm: 0ms;
+    }
 }

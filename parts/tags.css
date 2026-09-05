@@ -2,36 +2,85 @@
  *
  * **A tag is a pill and a pill is a `<li>`**, so the list is a list to anything reading the page and
  * the bullets are gone by declaration rather than by using a `<div>` and hoping.
+ *
+ * **THE ONE IN FORCE IS FILLED AND THE REST ARE OUTLINED**, which is the same distinction
+ * `Segmented` makes and is deliberately the same shape: a reader who has learnt what a filled pill
+ * means on one row of controls has learnt it for the other. `aria-current` is what says which, so
+ * the look and the announcement cannot come apart.
+ *
+ * **A tag with nowhere to go is not a control.** `.m-off` is a `<span>`, and it loses the border and
+ * the ground rather than keeping them and doing nothing when pressed.
  */
 
 .m-tag {
-    font-size: .75rem;
-    line-height: 1.6;
-    padding: .1rem .55rem;
-    border-radius: var(--m-pill);
-    background: var(--m-accent-soft);
-    color: var(--m-accent);
-    text-decoration: none;
-    border: 1px solid transparent;
     display: inline-flex;
     align-items: baseline;
-    gap: .35rem;
+    gap: var(--m-space-2);
+    font-size: var(--m-text-sm);
+    font-weight: var(--m-weight-medium);
+    line-height: 1.5;
+    letter-spacing: .002em;
+    padding: var(--m-space-1) var(--m-space-3);
+    border: 1px solid var(--m-line);
+    border-radius: var(--m-pill);
+    background: var(--m-raised);
+    color: var(--m-ink-soft);
+    text-decoration: none;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    transition: background-color var(--m-quick) var(--m-ease),
+                border-color var(--m-quick) var(--m-ease),
+                color var(--m-quick) var(--m-ease);
 
-    &:hover { border-color: var(--m-accent); }
-    &[aria-current] { background: var(--m-accent); color: var(--m-accent-ink); }
-    &.m-off { background: none; color: var(--m-ink-faint); }
+    &:hover {
+        background: var(--m-accent-soft);
+        border-color: color-mix(in oklab, var(--m-accent) 45%, var(--m-line));
+        color: var(--m-accent);
+        text-decoration: none;
+    }
+
+    &:active { background: color-mix(in oklab, var(--m-accent) 18%, transparent); }
+
+    &[aria-current] {
+        background: var(--m-accent);
+        border-color: var(--m-accent);
+        color: var(--m-accent-ink);
+
+        &:hover {
+            background: var(--m-accent-strong);
+            border-color: var(--m-accent-strong);
+            color: var(--m-accent-ink);
+        }
+    }
+
+    &.m-off {
+        background: none;
+        border-color: transparent;
+        color: var(--m-ink-faint);
+        padding-inline: 0;
+    }
 
     & .m-count {
         font-variant-numeric: tabular-nums;
-        opacity: .75;
+        font-weight: var(--m-weight-normal);
+        font-size: var(--m-text-xs);
+        opacity: .8;
     }
 }
 
 .m-tags {
     display: flex;
     flex-wrap: wrap;
-    gap: .3rem;
+    gap: var(--m-space-2);
     list-style: none;
-    margin: .4rem 0;
+    margin-block: var(--m-space-3);
     padding: 0;
+
+    /* **A thing with no tags leaves no gap.** `TagList` renders its `<ul>` whether or not there is
+     * anything in it -- which is right, because a list that appears and disappears is a list that
+     * moves the page -- so the empty one takes no room instead. */
+    &:empty {
+        display: none;
+        margin: 0;
+    }
 }

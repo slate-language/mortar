@@ -1,23 +1,41 @@
-/* Who wrote something, and when. */
+/* Who wrote something, and when.
+ *
+ * **There is no separator between the name and the date**, and that is a decision: a dot, a slash or
+ * a dash between two facts is a third thing to read, and the space already says they are different.
+ * The name carries a little more weight and a little more colour than the date, which is the order
+ * a reader wants them in.
+ */
 
 .m-byline {
     display: flex;
     align-items: center;
-    gap: .45rem;
-    margin: .35rem 0;
-    font-size: .85rem;
+    gap: var(--m-space-2);
+    flex-wrap: wrap;
+    margin: var(--m-space-2) 0;
+    font-size: var(--m-text-sm);
+    line-height: var(--m-lead-ui);
     color: var(--m-ink-faint);
 
     & .m-who {
         color: var(--m-ink-soft);
         text-decoration: none;
-        font-weight: 550;
+        font-weight: var(--m-weight-medium);
+        letter-spacing: -0.005em;
 
-        &:hover { color: var(--m-accent); }
+        &:hover {
+            color: var(--m-accent);
+            text-decoration: underline;
+            text-decoration-color: color-mix(in oklab, currentColor 40%, transparent);
+        }
     }
 }
 
+/* **`Timestamp` stands on its own too**, so its rules are not nested inside the byline's: a date in
+ * a table, beside a heading or at the foot of a post is the same small tabular thing. */
 .m-at {
     color: var(--m-ink-faint);
     font-variant-numeric: tabular-nums;
+    font-size: var(--m-text-sm);
+    letter-spacing: .005em;
+    white-space: nowrap;
 }

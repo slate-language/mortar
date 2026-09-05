@@ -282,6 +282,18 @@ inserts one element.
 something, and putting one on a search box would put it in the address bar of every search anybody
 sent to anybody else.
 
+**Three classes give a form a different shape**, and they are the library's own — hand one to
+`class`, which is appended and never substituted.
+
+| `class` | what it is for |
+|---|---|
+| `card` | the form is the thing on the page: a raised panel, its own border and its own padding |
+| `m-doing` | one button and no fields — signing out, deleting a post — laid out inline |
+| `m-search` | a search box in a header: one line, a pill on a sunken ground, and the field's label kept for a screen reader instead of printed over the box |
+
+`m-search` is the one that reaches into `Field`'s own layout, and it is why a header's search box
+does not need a `search` prop on `Field`.
+
 ## Field
 
 | prop | default | what it is |
@@ -298,6 +310,13 @@ sent to anybody else.
 | `id` | `null` | with none, `"f-" + name` |
 | `onInput` | `null` | |
 
+**A `required` field is marked with a `*` after its label**, drawn by the stylesheet from the
+`required` attribute itself rather than from a second prop — so the mark and the browser's own
+refusal to submit cannot come apart.
+
+**A control is drawn as a well and comes up to the raised colour under the caret**, which is what
+makes the field being filled in the lightest thing on the surface.
+
 ## TextArea
 
 | prop | default | what it is |
@@ -307,6 +326,9 @@ sent to anybody else.
 | `value` | `""` | the **default** value — a textarea's text is what it started as |
 | `rows` | `5` | |
 | `error`, `hint`, `required`, `placeholder`, `id`, `onInput` | | as `Field` |
+
+**A textarea is set in the reading face**, because what goes into it is a person's writing and
+`Post` is about to publish it in that face.
 
 ## FileInput
 

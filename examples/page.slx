@@ -31,12 +31,12 @@ Board(props: object) =
                                  name={t.name} authorHref={"/people/" + t.name} at={t.at}
                                  excerpt={t.excerpt} tags={t.tags} tagHref={tagged}
                                  replies={t.replies}/>
-    val search = <Form action="/" method="get" label="Search">
+    val search = <Form action="/" method="get" label="Search" class="m-search">
         <Field name="q" kind="search" label="Search threads" placeholder="Search threads"/>
     </Form>
     val nav = <Fragment>
         <Avatar name="ada" src="/uploads/ada.png"/>
-        <Form action="/signout" csrf="a-token">
+        <Form action="/signout" csrf="a-token" class="m-doing">
             <Button kind="submit" variant="quiet">Sign out</Button>
         </Form>
     </Fragment>
@@ -58,7 +58,7 @@ Board(props: object) =
             </PostList>
             <Problem detail="That reply could not be posted."
                      errors={[{ path: "body", got: "nothing" }]}/>
-            <Form action="/threads" csrf="a-token">
+            <Form action="/threads" csrf="a-token" class="card">
                 <Field name="title" label="Title" required placeholder="What is this about?"/>
                 <Actions><Button kind="submit">Post it</Button></Actions>
             </Form>
