@@ -3,7 +3,7 @@
 A component library for [lath](https://github.com/slate-language/lath), written in
 [slate](https://github.com/slate-language/slate).
 
-Twenty-seven components, each with its own stylesheet beside it — modern css, native nesting, custom
+Twenty-eight components, each with its own stylesheet beside it — modern css, native nesting, custom
 properties for the theme. **No preprocessor, no build step, and nothing to fetch at run time**: a
 stylesheet is a file the compiler reads and the program carries, and a page ends up with a `<style>`
 for exactly the components it rendered, on a server and in a browser alike.
@@ -98,6 +98,7 @@ Toast's `messages`, item 1, has no `id`
 | `FileInput` | `name`, `label`, `accept`, `maxSize`, `error`, `hint`, `required`, `id`, `onInput` |
 | `Button` | `kind`, `variant`, `disabled`, `onClick`, `label`, `children` |
 | `Actions` | `children` |
+| `Confirm` | `open`, `title`, `detail`, `confirmLabel`, `cancelLabel`, `tone`, `onConfirm`, `onCancel`, `id` |
 
 Plus ten exported lists of the words a prop may be — `Themes`, `Sizes`, `Shows`, `CardLevels`,
 `PostLevels`, `LiveManners`, `Tones`, `FormMethods`, `ButtonKinds`, `ButtonVariants` — and
@@ -244,6 +245,38 @@ That route is for the extra thing, not the cookie — `Theme` has already writte
 `onChange` runs, so a page that wants nothing more than the colour to persist needs no `onChange` and
 no route at all.
 
+## Confirming a destructive action
+
+**`Confirm` is the one component here that renders nothing on a server** — open or closed, not even
+its stylesheet. A modal exists to interrupt, and interrupting is something only a running page can
+do; the no-script answer to a destructive action is the plain form it was always going to submit, so
+a server sends that and a browser puts the question in front of it.
+
+```slate
+val [asking, setAsking] = useState(false)
+
+<Fragment>
+    <Button variant="danger" onClick={() -> setAsking(true)}>Delete</Button>
+    <Confirm open={asking} title="Delete this thread?" detail="It cannot be undone."
+             confirmLabel="Delete" onConfirm={remove} onCancel={() -> setAsking(false)}/>
+</Fragment>
+```
+
+**It goes through a portal into the document's `<body>`**, which is what lets a `Confirm` written
+inside a list row escape the row — a row with an `overflow`, a `position` or a `z-index` of its own
+would otherwise clip the panel or stack something over it. It is not a native `<dialog>`: `slate:dom`
+has no `showModal`, so what is here is a backdrop and a panel carrying `role="dialog"` and
+`aria-modal="true"`, which is what a browser gives a native dialog anyway.
+
+The focus rules are the whole of what makes it a modal rather than a box with two buttons in it, and
+`tests-dom/confirm.slx` measures every one of them against jsdom:
+
+- opening remembers what held the caret and puts it on **cancel**, which is the safe answer — a
+  dialog that opens on the destructive button is one a stray Return answers for the reader;
+- **Escape** and a click on the **backdrop** are `onCancel`; a click inside the panel is neither;
+- **Tab** cycles the panel's two buttons and never reaches the page behind them;
+- closing gives the caret back to what held it, if that element is still on the page.
+
 ## Server-rendered first, and hydration-clean
 
 **Every component renders to a string with lath's `stringHost` and hydrates with zero DOM
@@ -256,8 +289,11 @@ That is not free. `{n} replies` is a run of text children a parser reads back as
 lath 0.5.1 settled them in the tree. Every component here is written the ordinary way and the suite
 is what says so.
 
-**Nothing in this package imports a host.** There is no `lath/dom` and no `slate:dom`, so the whole
-library renders under the interpreter, beside `slate:http` on a server, and in a browser.
+**Two components import a host, and every other one imports none.** `Theme` reaches `slate:dom` for
+the cookie it persists a colour with, and `Confirm` reaches it for the body it portals into and the
+caret it moves; both ask `host()` first, so the call is simply not made where there is no browser to
+make it in. Everything else in the library is host-free and renders under the interpreter, beside
+`slate:http` on a server, and in a browser, from the same source.
 
 ## The tests
 
@@ -277,9 +313,11 @@ so it cannot change by accident.
 
 ## Requirements
 
-slate **0.0.35** or newer, and lath **0.7.0** or newer. The slate floor is `setCookie`/`cookie` on
-`slate:dom`, which is what `Theme` persists itself with, and the removal of `len(x)` in favor of
-`.length`. The lath floor is not a preference: the theme lives in an atom, and `atom`, `useAtom`,
+slate **0.0.37** or newer, and lath **0.7.0** or newer. The slate floor is `focus`, `blur` and
+`activeElement` on `slate:dom` — `Confirm` cannot move a caret, give one back, or trap Tab without
+all three, and there is no way to write a modal that does not. Before those it was 0.0.35, for
+`setCookie`/`cookie`, which is what `Theme` persists itself with, and the removal of `len(x)` in
+favor of `.length`. The lath floor is not a preference: the theme lives in an atom, and `atom`, `useAtom`,
 `createStore` and `Provider` are 0.6.0's. `style(css)` is where a component's stylesheet comes from,
 and every component here also relies on 0.5.1's fix for a
 run of text children and an empty text child hydrating against markup a browser parsed.
