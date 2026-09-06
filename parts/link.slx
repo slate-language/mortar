@@ -26,10 +26,16 @@ export plain(e: object) -> boolean =
 
 // One choice.
 //
-// `href` is where it goes; with none it is a `<span>` and not a link with nowhere to go, which is
-// what a keyboard walking the page cares about. `mark` is what `aria-current` says when this is the
-// one in force -- `"page"` for a page number and `"true"` for a filter, which is the distinction the
-// attribute exists to make.
+// `href` is where it goes; `mark` is what `aria-current` says when this is the one in force --
+// `"page"` for a page number and `"true"` for a filter, which is the distinction the attribute
+// exists to make.
+//
+// **THREE SHAPES, NOT TWO.** With an `href` this is a real anchor, and the whole file above is about
+// respecting a modified click on it. With no `href` but an `onChoose` -- the theme control's own
+// case, now that the theme is a cookie and has no address -- there is nothing for a no-script reader
+// or a cmd-click to do differently, so it is a `<button type="button">` calling `onChoose(value)`
+// directly and unconditionally. **Only with NEITHER is it the inert `<span class="m-off">`**: a
+// choice that goes nowhere and does nothing is not a link with nowhere to go, but reading material.
 export choice({ href = null, value = null, class: extra = "", current = false, mark = "true",
                 onChoose = null, children = [] }) =
     val to = maybeText("a choice", "href", href)
@@ -45,10 +51,18 @@ export choice({ href = null, value = null, class: extra = "", current = false, m
 
         chose(value)
 
-    val out = if to == null
-        <span class={cls + " m-off"}>{kids}</span>
-    else
+    pressed(e: object)
+        e.prevent()
+
+        chose(value)
+
+    val out = if to != null
         <a class={cls} href={to} aria-current={if on then mark else null}
            onClick={if chose == null then null else taken}>{kids}</a>
+    elif chose != null
+        <button type="button" class={cls} aria-current={if on then mark else null}
+                onClick={pressed}>{kids}</button>
+    else
+        <span class={cls + " m-off"}>{kids}</span>
 
     out

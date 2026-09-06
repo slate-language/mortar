@@ -143,3 +143,26 @@ async THE_CHOICE_IN_FORCE_IS_MARKED_ON_THE_PAGE_AND_NOT_ONLY_IN_THE_MARKUP()
     fresh(<Tag label="slate" href="/?tag=slate" current/>)
 
     assert(contains(shown(), "aria-current=\"true\""))
+
+@test
+async A_CHOICE_WITH_NO_HREF_IS_A_BUTTON_A_CLICK_CALLS_ONCHOOSE_ON()
+    // **There is nothing here for a modifier to do**, a button having no address to open elsewhere,
+    // so an ordinary click calls `onChoose` straight away and there is no anchor for the browser to
+    // navigate.
+    var chosen = ""
+
+    took(value) =
+        chosen = value
+
+        null
+
+    fresh(<Segmented options={["light", "dark"]} value="light" onChoose={took}/>)
+
+    val followed = navigations()
+
+    click("button[aria-current]")
+
+    await sleep(1)
+
+    assertEq(chosen, "light")
+    assertEq(navigations() - followed, 0)

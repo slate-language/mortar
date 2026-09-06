@@ -217,6 +217,10 @@ thing as a disabled anchor.**
 | `onChoose` | `null` | called with the value |
 | `label` | `null` | with one, the group is a `<nav aria-label>`; with none it is not a landmark |
 
+**With `href`, each choice is an anchor. With only `onChoose` and no `href`, each choice is a
+`<button type="button">` instead** — the shape for a choice with no address, such as a theme kept
+in a cookie.
+
 ## SortControls
 
 `Segmented` with `sort` in place of `value` and `label` defaulting to `"Sort"`.
