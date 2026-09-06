@@ -277,7 +277,7 @@ so it cannot change by accident.
 
 ## Requirements
 
-slate **0.0.35** or newer, and lath **0.6.0** or newer. The slate floor is `setCookie`/`cookie` on
+slate **0.0.35** or newer, and lath **0.7.0** or newer. The slate floor is `setCookie`/`cookie` on
 `slate:dom`, which is what `Theme` persists itself with, and the removal of `len(x)` in favor of
 `.length`. The lath floor is not a preference: the theme lives in an atom, and `atom`, `useAtom`,
 `createStore` and `Provider` are 0.6.0's. `style(css)` is where a component's stylesheet comes from,
