@@ -34,6 +34,157 @@
 // - Closing gives the caret back to what held it, if that element is still on the page --
 //   `property(node, "isConnected")` is the question, focusing a detached node being a silent no-op.
 //
-// **The look comes from `tokens.css` and nowhere else**: a raised surface, the largest shadow, pill
-// buttons, the space scale, and the dark theme the existing `[data-theme="dark"]` tokens already
-// answer. No other component's appearance changes.
+// **The look comes from `tokens.css` and nowhere else**: a raised surface, the largest shadow, the
+// space scale, and the dark theme the existing `[data-theme="dark"]` tokens already answer. The two
+// buttons are `button.css`'s, put on the page beside this component's own sheet -- a dialog's
+// buttons are buttons, and a second set of rules that only looked like them is how a library grows
+// two answers to one question. No other component's appearance changes.
+
+import { createElement, Fragment, createPortal, useMemo, useRef, useEffect, style } from lath
+import { query, focus, activeElement, attribute, property } from slate:dom
+
+import tokens from "./tokens.css"
+import buttons from "./button.css"
+import sheet from "./confirm.css"
+
+import { Variants } from "./button.slx"
+import { choice as oneOf, classes, flag, maybeFn, maybeText, text } from "./props.sl"
+
+// Where the panel goes, and the same call is the answer to *"is there a page at all"*.
+//
+// **`host()` and not a `catch` around the call.** Every `slate:dom` name faults where there is no
+// document, so a guard could be written either way -- but a `catch` would swallow a genuine fault
+// from a genuine browser just as quietly, and this component's whole behaviour hangs off the
+// answer. `host()` answers `"browser"` in a browser and under the jsdom document the DOM suite
+// installs, and `"interpreter"` or `"node"` everywhere else. A `null` here is the whole of
+// *"render nothing"*.
+body() =
+    if host() != "browser" then return null
+
+    query("body")
+
+// The question asked in front of something that cannot be taken back.
+export confirm({ open = false, title = null, detail = null, confirmLabel = "Confirm",
+                 cancelLabel = "Cancel", tone = "danger", onConfirm = null, onCancel = null,
+                 id = "m-confirm", class: extra = "" }) =
+    val asking = flag("Confirm", "open", open)
+    val said = text("Confirm", "title", title)
+    val why = maybeText("Confirm", "detail", detail)
+    val yes = text("Confirm", "confirmLabel", confirmLabel)
+    val no = text("Confirm", "cancelLabel", cancelLabel)
+    val look = oneOf("Confirm", "tone", tone, Variants)
+    val agree = maybeFn("Confirm", "onConfirm", onConfirm)
+    val refuse = maybeFn("Confirm", "onCancel", onCancel)
+    val own = text("Confirm", "id", id)
+
+    // **`class` is checked here rather than left to `classes`**, which every other component can do
+    // because every other component reaches its markup. This one often does not, and a prop refused
+    // only on the pass that renders is a prop refused on a browser and accepted on a server.
+    val also = text("Confirm", "class", extra)
+
+    // **Every hook this component has is called before anything decides not to render**, a hook
+    // being a slot in a list that has to be the same list on every pass -- and whether there is a
+    // document is exactly the thing that is not allowed to move one.
+    val into = useMemo(body, [])
+    val was = useRef(null)
+
+    // The caret, on the way in and on the way out.
+    //
+    // Opening remembers what held it and puts it on the cancel button, which is the safe one;
+    // closing gives it back, if what held it is still on the page -- focusing a detached node is a
+    // silent no-op, and `isConnected` is how the page is asked.
+    move() =
+        if into == null then return null
+
+        if asking
+            was.current = activeElement()
+
+            val cancel = query("[data-m-confirm=\"cancel\"]")
+
+            if cancel != null then focus(cancel)
+        else
+            val back = was.current
+
+            was.current = null
+
+            if back != null && property(back, "isConnected") == true then focus(back)
+
+        null
+
+    useEffect(move, [asking])
+
+    dismiss() =
+        if refuse != null then refuse()
+
+        null
+
+    // A click on the backdrop is a cancel.
+    outside(e) =
+        dismiss()
+
+        null
+
+    // A click inside the panel is not, and this is what keeps the backdrop from ever seeing it.
+    within(e) =
+        e.stop()
+
+        null
+
+    agreed(e) =
+        if agree != null then agree()
+
+        null
+
+    refused(e) =
+        dismiss()
+
+        null
+
+    // **Escape cancels, and Tab cycles the two buttons and nothing else** -- the panel's own
+    // buttons being the whole of what a trap has to hold. A node handle is a fresh integer every
+    // query, so where the caret is is asked of the page: `data-m-confirm` is the identity, and the
+    // other one of the two words is where Tab goes.
+    keyed(e) =
+        if e.key == "Escape"
+            e.prevent()
+            dismiss()
+        elif e.key == "Tab"
+            e.prevent()
+
+            val on = activeElement()
+            val where = if on == null then null else attribute(on, "data-m-confirm")
+            val to = if where == "confirm" then "cancel" else "confirm"
+            val node = query("[data-m-confirm=\"" + to + "\"]")
+
+            if node != null then focus(node)
+
+        null
+
+    // **Nothing at all where there is no document, open or closed** -- not even the stylesheet, a
+    // sheet on the page being something rendered. A server sends none of this and a page hydrating
+    // a closed dialog has nothing to correct.
+    if into == null then return null
+    if !asking then return null
+
+    style(tokens)
+    style(buttons)
+    style(sheet)
+
+    val panel = <div class="m-confirm-panel" role="dialog" aria-modal="true"
+                     aria-labelledby={own + "-title"}
+                     aria-describedby={if why == null then null else own + "-detail"}
+                     onClick={within}>
+        <h2 class="m-confirm-title" id={own + "-title"}>{said}</h2>
+        {if why == null then null else <p class="m-confirm-detail" id={own + "-detail"}>{why}</p>}
+        <p class="m-confirm-do">
+            <button type="button" class="m-button quiet" data-m-confirm="cancel"
+                    onClick={refused}>{no}</button>
+            <button type="button" class={"m-button " + look} data-m-confirm="confirm"
+                    onClick={agreed}>{yes}</button>
+        </p>
+    </div>
+
+    val out = createPortal(<div class={classes("Confirm", "m-confirm", extra)}
+                                onClick={outside} onKeyDown={keyed}>{panel}</div>, into)
+
+    out

@@ -378,6 +378,42 @@ deliberate**: a `<button>` inside a form with no `type` submits it.
 
 ---
 
+## Confirm
+
+| prop | default | what it is |
+|---|---|---|
+| `open` | `false` | whether the question is being asked |
+| `title` | — | the question, and it is required |
+| `detail` | `null` | the sentence under it, usually what cannot be undone |
+| `confirmLabel` | `"Confirm"` | the destructive answer |
+| `cancelLabel` | `"Cancel"` | the safe one |
+| `tone` | `"danger"` | `"primary"`, `"quiet"`, `"danger"` — the confirm button's variant |
+| `onConfirm` | `null` | |
+| `onCancel` | `null` | Escape, the backdrop, and the cancel button all reach this |
+| `id` | `"m-confirm"` | what the title and the detail are identified by, for `aria-labelledby` |
+
+**It renders nothing at all where there is no document — open or closed.** A modal is script-only: it
+exists to interrupt, and interrupting is something only a running page can do. A server rendering the
+same tree emits nothing, and the page's no-script answer to a destructive action is the plain form it
+was always going to submit. Every other component in this library renders on both hosts.
+
+**It goes through a portal into the document's `<body>`**, which is what lets a `Confirm` written
+inside a list row escape the row — a row with an `overflow`, a `position` or a `z-index` of its own
+would otherwise clip the panel or stack something over it.
+
+**It is not a native `<dialog>`.** `slate:dom` has no `showModal`, so there is nothing to open one
+with; what is here is a backdrop and a panel carrying `role="dialog"` and `aria-modal="true"`, which
+is what a browser gives a native dialog anyway.
+
+The focus rules, which are the whole of what makes it a modal rather than a box:
+
+- opening remembers what held the caret and puts it on the **cancel** button, which is the safe one;
+- **Escape** and a click on the **backdrop** are `onCancel`; a click inside the panel is neither;
+- **Tab** cycles the two buttons and leaves the page behind them alone;
+- closing gives the caret back to what held it, if that element is still on the page.
+
+---
+
 ## The words a prop may be
 
 Each of these is exported, so an application rendering its own control over the same set does not

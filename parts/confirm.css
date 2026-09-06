@@ -1,0 +1,102 @@
+/* The question asked in front of something that cannot be taken back.
+ *
+ * **THE BACKDROP IS A SCRIM AND NOT A COLOUR**, so it darkens whatever the page happens to be
+ * showing rather than tinting it: the same rule reads on a white page and on a dark one, and there
+ * is no second token to keep in step with the theme.
+ *
+ * **The panel is the raised surface and the largest shadow**, which is the library's elevation for
+ * *this is on top of everything*. A `Card` is flat and a `Post` is raised; nothing else in the
+ * library uses `--m-shadow-lg` and a shadow, which is what makes a dialog read as a dialog.
+ *
+ * **The buttons come from `button.css`**, which the component puts on the page beside this one --
+ * a dialog's two buttons are buttons, and a second set of rules that only looked like them is how a
+ * library grows two answers to one question.
+ *
+ * **It arrives and does not move after that.** The scrim fades and the panel rises a few pixels;
+ * both durations are `--m-calm`, which `tokens.css` zeroes under `prefers-reduced-motion`.
+ */
+
+.m-confirm {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--m-space-5);
+    background: rgb(20 22 28 / 45%);
+    animation: m-confirm-scrim var(--m-calm) var(--m-ease);
+
+    /* **The panel is a column and the space between its parts is the scale**, so a dialog with no
+     * `detail` closes up rather than leaving the gap the missing paragraph would have filled. */
+    & .m-confirm-panel {
+        display: flex;
+        flex-direction: column;
+        gap: var(--m-space-3);
+        width: min(28rem, 100%);
+        max-height: calc(100vh - var(--m-space-8));
+        overflow-y: auto;
+        background: var(--m-raised);
+        color: var(--m-ink);
+        border: 1px solid var(--m-line);
+        border-radius: var(--m-radius-lg);
+        box-shadow: var(--m-shadow-lg);
+        padding: var(--m-space-5);
+        animation: m-confirm-panel var(--m-calm) var(--m-ease);
+    }
+
+    /* The question itself, in the software's voice: this is not somebody's writing. */
+    & .m-confirm-title {
+        margin: 0;
+        font-size: var(--m-text-lg);
+        font-weight: var(--m-weight-semi);
+        line-height: var(--m-lead-tight);
+        letter-spacing: -.01em;
+    }
+
+    & .m-confirm-detail {
+        margin: 0;
+        color: var(--m-ink-soft);
+        font-size: var(--m-text-ui);
+        line-height: var(--m-lead-ui);
+    }
+
+    /* **The safe answer is first and the destructive one last**, which is the order a pointer
+     * travels and the order the caret does -- and the caret starts on the safe one. */
+    & .m-confirm-do {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        align-items: center;
+        gap: var(--m-space-2);
+        margin: var(--m-space-2) 0 0;
+    }
+
+    /* On a phone the panel is the width of the screen less a margin, and the two answers are a
+     * column -- a row of two full-width buttons is a row nobody can hit accurately. */
+    @media (width < 26rem) {
+        padding: var(--m-space-3);
+
+        & .m-confirm-do {
+            flex-direction: column-reverse;
+            align-items: stretch;
+        }
+    }
+}
+
+@keyframes m-confirm-scrim {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes m-confirm-panel {
+    from {
+        opacity: 0;
+        transform: translate3d(0, var(--m-space-2), 0);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}

@@ -1,0 +1,336 @@
+import { createElement, Fragment, mount, useState } from lath
+import { domHost } from lath/dom
+import { Confirm } from "../mortar.slx"
+import { activeElement, attribute, byId, query, removeChild } from slate:dom
+
+import { at, click, fire, focus, inHead, shown } from "./probe.slx"
+
+// The dialog against a real document, which is the only host it has anything to say on.
+//
+// **EVERY CLAIM THIS FILE MAKES IS ONE A STRING CANNOT ANSWER.** Where the panel ended up, which
+// button holds the caret, what Escape does, what a click on the backdrop does and what a click
+// inside it does not do: none of them is a shape in some markup, and all of them are what makes a
+// modal a modal rather than a box with two buttons in it.
+//
+// **A node handle is a fresh integer every query**, so nothing here compares handles. The two
+// buttons carry a `data-m-confirm`, the trigger carries an `id`, and both are asked of the page.
+
+// What the caret is in, by the name the page knows it under -- the button's own word inside the
+// dialog, the element's id outside it, and empty for nowhere at all.
+caret() -> string =
+    val on = activeElement()
+
+    if on == null then return ""
+
+    val word = attribute(on, "data-m-confirm")
+
+    if word != null then return word
+
+    val id = attribute(on, "id")
+
+    if id == null then "" else id
+
+// A page with something destructive on it and the question in front of it -- the shape an
+// application actually writes.
+screen({ done = null }) =
+    val [asking, setAsking] = useState(false)
+
+    confirmed() =
+        setAsking(false)
+
+        if done != null then done()
+
+        null
+
+    <Fragment>
+        <button id="go" type="button" onClick={() -> setAsking(true)}>Delete</button>
+        <Confirm open={asking} title="Delete this thread?" detail="It cannot be undone."
+                 confirmLabel="Delete" cancelLabel="Keep it"
+                 onConfirm={confirmed} onCancel={() -> setAsking(false)}/>
+    </Fragment>
+
+val Screen = screen
+
+// -- where it goes ---------------------------------------------------------------------------------
+
+@test
+async AN_OPEN_DIALOG_STANDS_IN_THE_BODY_AND_NOT_IN_THE_TREE_THAT_WROTE_IT()
+    // **A portal is the whole reason a dialog written inside a list row is not clipped by it.** The
+    // container the application mounted into holds the trigger and nothing else.
+    at("")
+
+    mount(<Screen/>, domHost("#page"))
+
+    click("#go")
+
+    await sleep(1)
+
+    assertEq(indexOf(shown(), "m-confirm"), null)
+    assert(query(".m-confirm-panel") != null)
+    assert(contains(shown(), "id=\"go\""))
+
+@test
+async A_CLOSED_DIALOG_IS_NOT_ON_THE_PAGE_AT_ALL()
+    at("")
+
+    mount(<Screen/>, domHost("#page"))
+
+    await sleep(1)
+
+    assertEq(query(".m-confirm"), null)
+
+@test
+async THE_PANEL_SAYS_WHAT_IT_IS_AND_NAMES_ITS_OWN_QUESTION()
+    // **The aria wiring is only answerable here.** `slate:dom` has no `showModal`, so this is a
+    // backdrop and a panel doing by hand what a browser gives a native dialog.
+    at("")
+
+    mount(<Screen/>, domHost("#page"))
+
+    click("#go")
+
+    await sleep(1)
+
+    val panel = query(".m-confirm-panel")
+
+    assertEq(attribute(panel, "role"), "dialog")
+    assertEq(attribute(panel, "aria-modal"), "true")
+    assertEq(attribute(panel, "aria-labelledby"), "m-confirm-title")
+    assertEq(attribute(panel, "aria-describedby"), "m-confirm-detail")
+
+    assertEq(attribute(byId("m-confirm-title"), "id"), "m-confirm-title")
+    assertEq(attribute(byId("m-confirm-detail"), "id"), "m-confirm-detail")
+
+@test
+async A_DIALOG_WITH_NO_DETAIL_IS_DESCRIBED_BY_NOTHING()
+    at("")
+
+    mount(<Confirm open={true} title="Delete this thread?"/>, domHost("#page"))
+
+    await sleep(1)
+
+    assertEq(attribute(query(".m-confirm-panel"), "aria-describedby"), null)
+    assertEq(byId("m-confirm-detail"), null)
+
+@test
+async THE_SHEET_ARRIVES_WITH_THE_DIALOG_AND_THE_BUTTONS_ARE_THE_LIBRARYS_OWN()
+    at("")
+
+    mount(<Confirm open={true} title="Delete this thread?"/>, domHost("#page"))
+
+    await sleep(1)
+
+    val head = inHead()
+
+    assert(contains(head, ".m-confirm"))
+    assert(contains(head, ".m-button"))
+
+// -- the caret -------------------------------------------------------------------------------------
+
+@test
+async OPENING_PUTS_THE_CARET_ON_THE_SAFE_ANSWER()
+    // **Cancel and not confirm.** A dialog that opens with the destructive button focused is one
+    // that a stray Return press answers for the reader.
+    at("")
+
+    mount(<Screen/>, domHost("#page"))
+
+    click("#go")
+
+    await sleep(1)
+
+    assertEq(caret(), "cancel")
+
+@test
+async CLOSING_GIVES_THE_CARET_BACK_TO_WHAT_HELD_IT()
+    // **The caret has to be PUT on the trigger, because a dispatched click does not move it.** A
+    // real browser focuses a button on mousedown; the harness sends the click event and nothing
+    // else, which is the honest half -- so the test does the focusing a person's finger would.
+    at("")
+
+    mount(<Screen/>, domHost("#page"))
+
+    focus(byId("go"))
+
+    click("#go")
+
+    await sleep(1)
+
+    assertEq(caret(), "cancel")
+
+    click("[data-m-confirm=\"cancel\"]")
+
+    await sleep(1)
+
+    assertEq(caret(), "go")
+
+@test
+async A_DIALOG_OPENED_FROM_NOWHERE_GIVES_THE_CARET_BACK_TO_NOWHERE()
+    // Nothing held it, so there is nothing to give back -- and the close is not a fault.
+    at("")
+
+    mount(<Screen/>, domHost("#page"))
+
+    click("#go")
+
+    await sleep(1)
+
+    assertEq(caret(), "cancel")
+
+    click("[data-m-confirm=\"cancel\"]")
+
+    await sleep(1)
+
+    assertEq(caret(), "")
+
+@test
+async A_TRIGGER_THAT_LEFT_THE_PAGE_WHILE_THE_QUESTION_WAS_OPEN_IS_NOT_FOCUSED_BACK()
+    // **`isConnected` is the question, and focusing a detached node is a silent no-op** -- so a
+    // dialog whose trigger was the row that has since been removed closes without a fault and
+    // without pretending the caret went anywhere.
+    at("")
+
+    mount(<Screen/>, domHost("#page"))
+
+    focus(byId("go"))
+
+    click("#go")
+
+    await sleep(1)
+
+    assertEq(caret(), "cancel")
+
+    removeChild(byId("page"), byId("go"))
+
+    click("[data-m-confirm=\"cancel\"]")
+
+    await sleep(1)
+
+    assertEq(caret(), "")
+    assertEq(byId("go"), null)
+
+@test
+async TAB_CYCLES_THE_TWO_BUTTONS_AND_LEAVES_THE_PAGE_BEHIND_THEM_ALONE()
+    // **The panel's two buttons are the whole of what a trap has to hold**, so a Tab is a toggle --
+    // and the trigger on the page behind never gets the caret while the question is being asked.
+    at("")
+
+    mount(<Screen/>, domHost("#page"))
+
+    click("#go")
+
+    await sleep(1)
+
+    fire(query("[data-m-confirm=\"cancel\"]"), "keydown key=Tab")
+
+    await sleep(1)
+
+    assertEq(caret(), "confirm")
+
+    fire(query("[data-m-confirm=\"confirm\"]"), "keydown key=Tab")
+
+    await sleep(1)
+
+    assertEq(caret(), "cancel")
+
+// -- the three ways out ------------------------------------------------------------------------------
+
+@test
+async ESCAPE_IS_A_CANCEL()
+    at("")
+
+    mount(<Screen/>, domHost("#page"))
+
+    click("#go")
+
+    await sleep(1)
+
+    fire(query("[data-m-confirm=\"cancel\"]"), "keydown key=Escape")
+
+    await sleep(1)
+
+    assertEq(query(".m-confirm"), null)
+
+@test
+async A_CLICK_ON_THE_BACKDROP_IS_A_CANCEL()
+    at("")
+
+    mount(<Screen/>, domHost("#page"))
+
+    click("#go")
+
+    await sleep(1)
+
+    click(".m-confirm")
+
+    await sleep(1)
+
+    assertEq(query(".m-confirm"), null)
+
+@test
+async A_CLICK_INSIDE_THE_PANEL_IS_NOT()
+    // **The panel stops the click before the backdrop ever sees it**, which is what keeps a reader
+    // who selects the question from dismissing it.
+    at("")
+
+    mount(<Screen/>, domHost("#page"))
+
+    click("#go")
+
+    await sleep(1)
+
+    click(".m-confirm-title")
+    click(".m-confirm-panel")
+
+    await sleep(1)
+
+    assert(query(".m-confirm-panel") != null)
+
+@test
+async THE_DESTRUCTIVE_ANSWER_IS_THE_ONE_THAT_CALLS_ONCONFIRM()
+    var done = 0
+
+    remove() =
+        done = done + 1
+
+        null
+
+    at("")
+
+    mount(<Screen done={remove}/>, domHost("#page"))
+
+    click("#go")
+
+    await sleep(1)
+
+    assertEq(done, 0)
+
+    click("[data-m-confirm=\"confirm\"]")
+
+    await sleep(1)
+
+    assertEq(done, 1)
+    assertEq(query(".m-confirm"), null)
+
+@test
+async THE_SAFE_ANSWER_NEVER_CALLS_ONCONFIRM()
+    var done = 0
+
+    remove() =
+        done = done + 1
+
+        null
+
+    at("")
+
+    mount(<Screen done={remove}/>, domHost("#page"))
+
+    click("#go")
+
+    await sleep(1)
+
+    click("[data-m-confirm=\"cancel\"]")
+
+    await sleep(1)
+
+    assertEq(done, 0)

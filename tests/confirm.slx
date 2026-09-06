@@ -1,0 +1,92 @@
+import { createElement, Fragment, mount, html } from lath
+import { Confirm } from "../mortar.slx"
+
+import { fell, tree } from "./support.sl"
+
+// The dialog, on a host that is not a page.
+//
+// **THIS FILE IS ALMOST ENTIRELY ABOUT WHAT IS *NOT* THERE**, which is the one component in this
+// library that is script-only. A modal exists to interrupt, and interrupting is something only a
+// running page can do -- so a server renders nothing at all, open or closed, and the page's
+// no-script answer to a destructive action is the plain form it was always going to submit.
+//
+// The prop refusals still run here, because they run before anything decides not to render: a
+// misspelled `tone` is a sentence naming the prop wherever the component was asked to render.
+
+markup(el) -> string = tree(html(mount(el)))
+whole(el) -> string = html(mount(el))
+
+// -- what a server sends ---------------------------------------------------------------------------
+
+@test
+AN_OPEN_DIALOG_RENDERS_NOTHING_WHERE_THERE_IS_NO_DOCUMENT()
+    assertEq(markup(<Confirm open={true} title="Delete this thread?"/>), "")
+
+@test
+A_CLOSED_DIALOG_RENDERS_NOTHING_EITHER()
+    assertEq(markup(<Confirm title="Delete this thread?"/>), "")
+
+@test
+NOT_EVEN_THE_STYLESHEET_GOES_TO_A_HOST_WITH_NO_DOCUMENT()
+    // **A sheet on the page is something rendered.** A server that sent the dialog's css would be
+    // sending the appearance of a thing it did not send, and a page hydrating a closed dialog would
+    // have a `<style>` to reconcile against nothing.
+    val out = whole(<Confirm open={true} title="Delete this thread?" detail="It cannot be undone."/>)
+
+    assertEq(out, "")
+
+@test
+NEITHER_DOES_THE_DETAIL_OR_THE_LABELS_LEAK_INTO_THE_MARKUP()
+    val out = whole(<Confirm open={true} title="Delete this thread?" detail="It cannot be undone."
+                             confirmLabel="Delete" cancelLabel="Keep it"/>)
+
+    assertEq(indexOf(out, "Delete"), null)
+    assertEq(indexOf(out, "Keep it"), null)
+
+// -- the refusals ------------------------------------------------------------------------------------
+
+@test
+A_DIALOG_WITH_NO_TITLE_IS_REFUSED()
+    // The question is the whole component; a dialog with no question is a box.
+    val said = fell(() -> markup(<Confirm open={true}/>))
+
+    assert(contains(said, "`title`"))
+
+@test
+A_TITLE_THAT_IS_NOT_TEXT_IS_REFUSED()
+    val said = fell(() -> markup(<Confirm open={true} title={7}/>))
+
+    assert(contains(said, "`title`"))
+
+@test
+AN_OPEN_THAT_IS_NOT_A_FLAG_IS_REFUSED()
+    val said = fell(() -> markup(<Confirm open="yes" title="Delete?"/>))
+
+    assert(contains(said, "`open`"))
+
+@test
+A_TONE_THAT_IS_NOT_ONE_OF_THE_BUTTON_VARIANTS_IS_REFUSED()
+    val said = fell(() -> markup(<Confirm open={true} title="Delete?" tone="scary"/>))
+
+    assert(contains(said, "`tone`"))
+
+@test
+A_HANDLER_THAT_IS_NOT_A_FUNCTION_IS_REFUSED()
+    val one = fell(() -> markup(<Confirm open={true} title="Delete?" onConfirm="remove"/>))
+    val two = fell(() -> markup(<Confirm open={true} title="Delete?" onCancel="close"/>))
+
+    assert(contains(one, "`onConfirm`"))
+    assert(contains(two, "`onCancel`"))
+
+@test
+A_DETAIL_THAT_IS_NOT_TEXT_IS_REFUSED_AND_NO_DETAIL_IS_NOT()
+    val said = fell(() -> markup(<Confirm open={true} title="Delete?" detail={[1, 2]}/>))
+
+    assert(contains(said, "`detail`"))
+    assertEq(markup(<Confirm open={true} title="Delete?"/>), "")
+
+@test
+A_CLASS_THAT_IS_NOT_TEXT_IS_REFUSED_LIKE_EVERY_OTHER_COMPONENTS()
+    val said = fell(() -> markup(<Confirm open={true} title="Delete?" class={3}/>))
+
+    assert(contains(said, "`class`"))

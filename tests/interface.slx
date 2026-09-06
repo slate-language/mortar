@@ -18,7 +18,8 @@ val Components = ["Theme", "Page", "VisuallyHidden",
                   "Card", "ThreadCard", "CardList", "Post", "PostList",
                   "Tag", "TagList", "Pagination", "Segmented", "SortControls",
                   "EmptyState", "Problem", "Live", "Toast",
-                  "Form", "Field", "TextArea", "FileInput", "Button", "Actions"]
+                  "Form", "Field", "TextArea", "FileInput", "Button", "Actions",
+                  "Confirm"]
 
 // The hooks and the helpers that are not components.
 val Functions = ["useTheme", "problemReason"]
@@ -56,10 +57,10 @@ EVERY_CLOSED_SET_OF_WORDS_IS_A_LIST_OF_WORDS()
             if !(one is string) then throw "`" + name + "` holds something that is not a word"
 
 @test
-THE_INTERFACE_IS_THIRTY_NINE_NAMES_AND_NOTHING_ELSE()
+THE_INTERFACE_IS_FORTY_NAMES_AND_NOTHING_ELSE()
     // **A count, so that a name added to one library and not the other is caught here** rather than
     // in an application that imported it.
-    assertEq(Components.length + Functions.length + Words.length, 39)
+    assertEq(Components.length + Functions.length + Words.length, 40)
 
 @test
 THE_WORDS_ARE_THE_ONES_THE_COMPONENTS_ACTUALLY_CHECK()

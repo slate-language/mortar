@@ -42,6 +42,7 @@
 // | `FileInput` | `name`, `label`, `accept`, `maxSize`, `error`, `hint`, `required`, `id`, `onInput` |
 // | `Button` | `kind`, `variant`, `disabled`, `onClick`, `label`, `children` |
 // | `Actions` | `children` |
+// | `Confirm` | `open`, `title`, `detail`, `confirmLabel`, `cancelLabel`, `tone`, `onConfirm`, `onCancel`, `id` |
 // | `VisuallyHidden` | `tag`, `children` |
 //
 // **`docs/components.md` is the same table with every default and every refusal**, and it is checked
@@ -64,6 +65,7 @@ import { form, Methods as formMethods } from "./parts/form.slx"
 import { field, textArea, fileInput } from "./parts/field.slx"
 import { button, actions, Kinds as buttonKinds, Variants as buttonVariants } from "./parts/button.slx"
 import { hidden } from "./parts/hidden.slx"
+import { confirm } from "./parts/confirm.slx"
 
 // -- the theme -------------------------------------------------------------------------------------
 
@@ -113,6 +115,15 @@ export val TextArea = textArea
 export val FileInput = fileInput
 export val Button = button
 export val Actions = actions
+
+// -- asking before something irreversible ------------------------------------------------------------
+//
+// **The one component in this library that is script-only**, and the only one that renders nothing at
+// all where there is no document: a modal exists to interrupt, and interrupting is something only a
+// running page can do. A server's answer to a destructive action is the plain form it was always
+// going to submit.
+
+export val Confirm = confirm
 
 // -- the words a prop may be -------------------------------------------------------------------------
 //
