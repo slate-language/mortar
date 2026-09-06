@@ -116,6 +116,17 @@ AN_OPTION_THAT_IS_NEITHER_A_WORD_NOR_A_RECORD_NAMES_THE_PROP()
     assert(contains(fell(() -> markup(<Segmented options={[7]}/>)), "Segmented's `options`"))
 
 @test
+A_CHOICE_WITH_NO_ADDRESS_IS_A_BUTTON_AND_NOT_A_DEAD_LINK()
+    // **A theme kept in a cookie has nothing to put in `href`**, so `onChoose` alone still makes a
+    // real, focusable control rather than the inert `<span>` a choice with neither prop is.
+    val out = markup(<Segmented options={["light", "dark"]} value="light" onChoose={(v) -> null}/>)
+
+    assert(!contains(out, "<a "))
+    assert(!contains(out, "m-off"))
+    assertEq(countOf(out, "<button type=\"button\" class=\"m-seg\""), 2)
+    assertEq(countOf(out, "aria-current=\"true\""), 1)
+
+@test
 SORT_CONTROLS_ARE_A_SEGMENTED_CONTROL_WITH_ITS_LABEL_WRITTEN_IN()
     val out = markup(<SortControls options={["newest"]} sort="newest" href={(v) -> "/?sort=" + v}/>)
 

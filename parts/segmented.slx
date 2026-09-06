@@ -1,10 +1,12 @@
 // A row of choices where exactly one is in force -- a sort order, an open tab, a filter with a
 // default.
 //
-// **IT IS A LIST OF LINKS AND NOT A SET OF BUTTONS**, and that is the decision the file is made of.
-// A sort order is part of the address: somebody can bookmark it, send it to somebody else and press
-// back out of it, and the list is sorted correctly on a page whose script never ran. A row of
-// buttons is none of those things and is the shape a component library usually ships.
+// **IT IS A LIST OF LINKS WHEN THE CHOICE HAS AN ADDRESS, AND THAT IS STILL THE DECISION TO REACH
+// FOR FIRST.** A sort order is part of the address: somebody can bookmark it, send it to somebody
+// else and press back out of it, and the list is sorted correctly on a page whose script never ran.
+// Pass `href` and every choice below is one of those anchors. **Pass only `onChoose`, with no
+// `href`, and each choice is a `<button type="button">` instead** -- the shape for a choice that
+// truly has no address, such as a theme kept in a cookie rather than in the query string.
 //
 // `SortControls` is this with a name that says what it is for and a label already written.
 
