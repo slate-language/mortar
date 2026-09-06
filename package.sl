@@ -1,6 +1,6 @@
 {
     name: "mortar",
-    version: "0.3.1",
+    version: "0.3.2",
 
     // **One module, and that is the whole of the public surface.** `mortar.slx` declares every
     // component the library has; the files under `parts/` are where the bodies and the stylesheets
@@ -8,9 +8,10 @@
     // imports has to be declared in the file it imports -- which is what the aliases in `mortar.slx`
     // are, and what makes that file the interface rather than a table in a README.
     //
-    // **Nothing here imports a host.** No `lath/dom`, no `slate:dom`: every component renders to
-    // markup on a server and into a document in a browser, and a suite can render all of them under
-    // the interpreter with no page in the room.
+    // **Only `parts/theme.slx` imports a host, and only for `slate:dom`'s cookie functions.** It
+    // never calls one unguarded: the write is wrapped in a `catch`, so it is a no-op under the
+    // interpreter and under a server, and every component still renders to markup on a server and
+    // into a document in a browser with no other host import anywhere in the package.
     main: "mortar.slx",
 
     dependencies: {

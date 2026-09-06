@@ -13,6 +13,7 @@
 // and needs no `Theme` above it to do either.
 
 import { createElement, Fragment, atom, useAtom, useEffect, useRef, style } from lath
+import { setCookie } from slate:dom
 
 import tokens from "./tokens.css"
 import sheet from "./theme.css"
@@ -78,8 +79,18 @@ export theme({ theme = null, onChange = null, class: extra = "", children = [] }
 
     val mounted = useRef(false)
 
+    // **The cookie write shares the mount guard with `onChange`** -- never for the seed and never
+    // for a prop staying the same, only for a later `useTheme()` toggle. `setCookie` is `slate:dom`'s
+    // and every one of that module's names faults under the interpreter and under a server that is
+    // not a browser; `catch` is how this file tells the two apart without asking, since nothing a
+    // shared component can import answers "am I in a browser" directly. A real browser, and the
+    // jsdom document the DOM suite installs, both let it through; anywhere else the write is simply
+    // not there to make, exactly like the `onChange` this sits beside.
     notify() =
-        if handler != null && mounted.current then handler(now)
+        if mounted.current
+            if handler != null then handler(now)
+
+            setCookie("theme", now, { path: "/", maxAge: 31536000, sameSite: "Lax" }) catch e -> null
 
         mounted.current = true
 

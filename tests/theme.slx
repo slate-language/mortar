@@ -200,6 +200,31 @@ ONCHANGE_IS_NOT_CALLED_ON_MOUNT_AND_IS_CALLED_ONCE_PER_LATER_TOGGLE()
     assertEq(seen, ["dark", "light"])
 
 @test
+A_SEED_AND_A_TOGGLE_DO_NOT_FAULT_WHERE_THERE_IS_NO_BROWSER()
+    // **`Theme` writes a cookie on a real change now, and `slate:dom`'s `setCookie` faults under
+    // both hosts this file runs on** -- the interpreter and plain node with `--js`, neither a
+    // browser. The `catch` inside `Theme` is what keeps that fault from ever reaching here; this
+    // test is the seed and the toggle both going through exactly as they did before that write
+    // existed, which is the proof rather than a read of the source.
+    var setter = null
+
+    Toggle(props: object) =
+        val [now, set] = useTheme()
+
+        setter = set
+
+        <p>{now}</p>
+
+    val root = mount(<Provider store={fresh()}><Theme theme="dark"><Toggle/></Theme></Provider>)
+
+    assert(contains(html(root), "data-theme=\"dark\""))
+
+    setter("light")
+    flush(root)
+
+    assert(contains(html(root), "data-theme=\"light\""))
+
+@test
 TWO_STORES_ONE_PROGRAM_TWO_COLOURS()
     // **One atom, two values.** `createStore()` plus `<Provider>` is what a server does per request
     // so that one process rendering two of them at once gets two independent pages; a program that

@@ -222,20 +222,27 @@ word renders light rather than faulting, the same as an unrecognised address par
 renders `<Theme theme={x}>` on every render is not fought by its own toggle: `useTheme()`'s setter,
 called from anywhere in the tree, is the atom's own value from then on.
 
-**The client writes the cookie back when the reader changes it — except there is currently no way to
-do that from `slate:dom`.** `slate:dom` has `location`, `history` and `localStorage` and nothing that
-reads or writes `document.cookie`; this is a gap in the host rather than something worth routing
-around with raw JavaScript. Until it exists, `onChange` is the persistence mechanism: called with the
-theme after every later change — never for the seed and never on mount, so a page can reach a server
-route without posting to it on every load.
+**`Theme` writes the cookie back itself, when the reader changes it.** `slate:dom` got `setCookie` in
+0.0.34, and `Theme` calls it directly — `theme=dark; path=/; max-age=31536000; samesite=lax` — under
+the same condition as `onChange` below: never for the seed, never on mount, only for a later
+`useTheme()` toggle. No route is needed any more for the ordinary case; the very next request already
+carries the cookie the server seeds from.
+
+**The write is guarded by a `catch`, not by asking first.** A shared component has no way to ask "am
+I in a browser" — that is answered by attempting the write and letting a fault under the interpreter
+or a non-browser server say no, exactly the way `cookie()` itself answers `null` for a name that is
+not set rather than refusing to be called.
+
+**`onChange` is still there, for anything beyond the cookie** — a session store, an analytics event,
+a second cookie on a different path:
 
 ```slate
 <Theme onChange={(next) -> post("/theme", { theme: next })}>
 ```
 
-That route sets the cookie server-side, with `slate:http`'s `setCookie`, and the *next* request
-already renders the right colour — which is everything a client-written cookie would have bought,
-one round trip later.
+That route is for the extra thing, not the cookie — `Theme` has already written `theme` by the time
+`onChange` runs, so a page that wants nothing more than the colour to persist needs no `onChange` and
+no route at all.
 
 ## Server-rendered first, and hydration-clean
 
@@ -261,7 +268,7 @@ npm install
 NODE_OPTIONS="--import ./tests-dom/setup.mjs" slate test --js tests-dom
 ```
 
-**139, 139 and 27.** The first two are the same suite on both hosts. The third renders the components
+**142, 142 and 30.** The first two are the same suite on both hosts. The third renders the components
 into a real [jsdom](https://github.com/jsdom/jsdom) document — jsdom is a **dev** dependency of this
 repository and of nothing else; a program that uses this package never sees npm.
 
@@ -270,7 +277,8 @@ so it cannot change by accident.
 
 ## Requirements
 
-slate **0.0.30** or newer, and lath **0.6.0** or newer. The lath floor is not a preference: the theme
+slate **0.0.34** or newer, and lath **0.6.0** or newer. The slate floor is `setCookie`/`cookie` on
+`slate:dom`, which is what `Theme` persists itself with. The lath floor is not a preference: the theme
 lives in an atom, and `atom`, `useAtom`, `createStore` and `Provider` are 0.6.0's. `style(css)` is
 where a component's stylesheet comes from, and every component here also relies on 0.5.1's fix for a
 run of text children and an empty text child hydrating against markup a browser parsed.

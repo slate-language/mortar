@@ -1,5 +1,6 @@
 import { createElement, Fragment, mount, hydrate, html, flush, createStore, Provider } from lath
 import { domHost } from lath/dom
+import { setCookie, cookie } from slate:dom
 import { Button, Theme, useTheme } from "../mortar.slx"
 
 import { at, click, mutations, shown } from "./probe.slx"
@@ -103,3 +104,40 @@ async A_PAGE_RENDERED_DARK_ON_THE_SERVER_HYDRATES_DARK_AND_RECORDS_NOTHING()
 
     assertEq(mutations() - before, 0)
     assert(contains(shown(), "data-theme=\"dark\""))
+
+@test
+async A_SEEDED_MOUNT_WRITES_NO_COOKIE()
+    // **The seed is not a change**, so it is not a write -- the same guard `onChange` uses in
+    // `tests/theme.slx`. A sentinel proves the cookie was left alone rather than merely absent,
+    // since the document this suite shares may already carry a "theme" cookie from another test.
+    setCookie("theme", "sentinel", { path: "/" })
+
+    fresh("dark")
+
+    await sleep(1)
+
+    assertEq(cookie("theme"), "sentinel")
+
+@test
+async A_TOGGLE_WRITES_THE_COOKIE()
+    setCookie("theme", "sentinel", { path: "/" })
+
+    fresh()
+
+    click("button[aria-label=\"theme\"]")
+
+    await sleep(1)
+
+    assertEq(cookie("theme"), "dark")
+
+@test
+async TOGGLING_BACK_WRITES_THE_OTHER_WORD()
+    setCookie("theme", "sentinel", { path: "/" })
+
+    fresh("dark")
+
+    click("button[aria-label=\"theme\"]")
+
+    await sleep(1)
+
+    assertEq(cookie("theme"), "light")
