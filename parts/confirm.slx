@@ -1,0 +1,39 @@
+// The question asked in front of something that cannot be taken back.
+//
+// **NOT A NATIVE `<dialog>`.** `slate:dom` has no `showModal`, so there is nothing to open a native
+// dialog with and nothing to close one with; what is here is a backdrop and a panel carrying
+// `role="dialog"` and `aria-modal="true"`, which is what a browser gives a native dialog anyway.
+//
+// **IT RENDERS NOTHING WHERE THERE IS NO DOCUMENT.** A modal is script-only: it exists to interrupt,
+// and interrupting is something only a running page can do. A server rendering the same tree emits
+// nothing at all, and the page's no-script answer to a destructive action is the plain form it was
+// always going to submit. So the string host sees an empty render whether the dialog is open or not,
+// and a closed dialog hydrates against that with nothing to correct.
+//
+// **IT GOES THROUGH A PORTAL INTO THE BODY**, which is what lets a `Confirm` written inside a list
+// row escape the row -- a row with `overflow`, a `position` or a `z-index` of its own would otherwise
+// clip the panel or stack something over it. The container is held in a `useMemo`, because `query`
+// mints a fresh handle every call and a portal handed a different container is a different portal.
+//
+// The shape it is being built to:
+//
+//     <Confirm open={asking} title="Delete this thread?" detail="It cannot be undone."
+//              confirmLabel="Delete" cancelLabel="Cancel" tone="danger"
+//              onConfirm={remove} onCancel={() -> setAsking(false)}/>
+//
+// **What the focus rules are, and how each one is reachable from slate.** A node is an integer handle
+// and `byId` mints a fresh one every call, so identity is asked of the page rather than of the
+// handle: the two buttons carry a `data-m-confirm` of `"cancel"` and `"confirm"`, and
+// `attribute(activeElement(), "data-m-confirm")` is how the trap knows where the caret is.
+//
+// - Opening remembers `activeElement()` and focuses the cancel button, which is the safe one.
+// - Escape and a click on the backdrop are `onCancel`; a click inside the panel is neither, the
+//   panel stopping the click before the backdrop sees it.
+// - Tab from the confirm button goes to the cancel button and Shift-Tab from cancel goes to confirm,
+//   the panel's two buttons being the whole of what a trap has to cycle.
+// - Closing gives the caret back to what held it, if that element is still on the page --
+//   `property(node, "isConnected")` is the question, focusing a detached node being a silent no-op.
+//
+// **The look comes from `tokens.css` and nowhere else**: a raised surface, the largest shadow, pill
+// buttons, the space scale, and the dark theme the existing `[data-theme="dark"]` tokens already
+// answer. No other component's appearance changes.
