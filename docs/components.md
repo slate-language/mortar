@@ -28,7 +28,7 @@ component knows the value and the application knows what a value means as a URL.
 | prop | default | what it is |
 |---|---|---|
 | `theme` | `null` | `"light"` or `"dark"`. With none, the theme is whatever `themeAtom` already holds |
-| `onChange` | `null` | called with the theme once after mount, and again after every later change |
+| `onChange` | `null` | called with the theme after every later change; never for the seed and never on mount |
 | `children` | `[]` | |
 
 Renders `<div class="mortar" data-theme="…">`, which is what every stylesheet in the library selects

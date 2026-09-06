@@ -226,7 +226,8 @@ called from anywhere in the tree, is the atom's own value from then on.
 do that from `slate:dom`.** `slate:dom` has `location`, `history` and `localStorage` and nothing that
 reads or writes `document.cookie`; this is a gap in the host rather than something worth routing
 around with raw JavaScript. Until it exists, `onChange` is the persistence mechanism: called with the
-theme once after mount and again after every later change, so a page can reach a server route instead.
+theme after every later change — never for the seed and never on mount, so a page can reach a server
+route without posting to it on every load.
 
 ```slate
 <Theme onChange={(next) -> post("/theme", { theme: next })}>

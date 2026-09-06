@@ -1,4 +1,4 @@
-import { createElement, Fragment, mount, html, flush, createStore, Provider } from lath
+import { createElement, Fragment, mount, html, flush, createStore, Provider, useState } from lath
 import { Avatar, Theme, Themes, useTheme } from "../mortar.slx"
 import { themeAtom } from "../parts/theme.slx"
 
@@ -98,9 +98,78 @@ A_THEME_TOGGLED_FROM_A_NESTED_COMPONENT_RERENDERS_BOTH()
     assert(contains(html(root), "data-theme=\"light\""))
 
 @test
-ONCHANGE_IS_CALLED_AFTER_MOUNT_AND_AGAIN_AFTER_EVERY_LATER_CHANGE()
-    // **This is the hook a server route persists a choice through**, now that nothing here writes a
-    // cookie for it -- see the README for why the client does not write one itself.
+A_THEME_TOGGLED_BELOW_A_SEEDED_THEME_STICKS_AFTER_THE_TOGGLE()
+    // **The seed is read once.** Mounting with `theme="light"` seeds the atom on the first render
+    // only -- every render after that, including the one this toggle causes, is the atom's own
+    // value, not a fight with the prop that seeded it.
+    var setter = null
+
+    Toggle(props: object) =
+        val [now, set] = useTheme()
+
+        setter = set
+
+        <p>{now}</p>
+
+    val root = mount(<Provider store={fresh()}><Theme theme="light"><Toggle/></Theme></Provider>)
+
+    assert(contains(html(root), "<p>light</p>"))
+
+    setter("dark")
+    flush(root)
+
+    assert(contains(html(root), "<p>dark</p>"))
+    assert(contains(html(root), "data-theme=\"dark\""))
+
+    setter("light")
+    flush(root)
+
+    assert(contains(html(root), "<p>light</p>"))
+    assert(contains(html(root), "data-theme=\"light\""))
+
+@test
+A_RERENDER_WITH_THE_SEED_PROP_UNCHANGED_DOES_NOT_UNDO_A_TOGGLE()
+    // **A second render is not a second seed.** A parent that re-renders for a reason that has
+    // nothing to do with the theme still hands `theme="light"` in on every pass; if that prop were
+    // read as a live value rather than a one-time seed, this render would silently revert a toggle
+    // that already happened below.
+    var toggle = null
+    var bump = null
+
+    Toggle(props: object) =
+        val [now, set] = useTheme()
+
+        toggle = set
+
+        <p>{now}</p>
+
+    Bumper(props: object) =
+        val [n, set] = useState(0)
+
+        bump = () -> set(n + 1)
+
+        <Theme theme="light"><Toggle/></Theme>
+
+    val root = mount(<Provider store={fresh()}><Bumper/></Provider>)
+
+    assert(contains(html(root), "<p>light</p>"))
+
+    toggle("dark")
+    flush(root)
+
+    assert(contains(html(root), "<p>dark</p>"))
+
+    bump()
+    flush(root)
+
+    assert(contains(html(root), "<p>dark</p>"))
+    assert(contains(html(root), "data-theme=\"dark\""))
+
+@test
+ONCHANGE_IS_NOT_CALLED_ON_MOUNT_AND_IS_CALLED_ONCE_PER_LATER_TOGGLE()
+    // **This is the hook a server route persists a choice through**, and it must fire only for an
+    // actual change -- an application posting to that route on every page load, for a seed nobody
+    // chose, is the bug this test pins.
     var seen = []
     var setter = null
 
@@ -118,12 +187,17 @@ ONCHANGE_IS_CALLED_AFTER_MOUNT_AND_AGAIN_AFTER_EVERY_LATER_CHANGE()
 
     val root = mount(<Provider store={fresh()}><Theme onChange={took}><Toggle/></Theme></Provider>)
 
-    assertEq(seen, ["light"])
+    assertEq(seen, [])
 
     setter("dark")
     flush(root)
 
-    assertEq(seen, ["light", "dark"])
+    assertEq(seen, ["dark"])
+
+    setter("light")
+    flush(root)
+
+    assertEq(seen, ["dark", "light"])
 
 @test
 TWO_STORES_ONE_PROGRAM_TWO_COLOURS()

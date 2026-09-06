@@ -12,7 +12,7 @@
 // **The atom is the only source of truth once seeded.** `useTheme()` reads and writes it directly
 // and needs no `Theme` above it to do either.
 
-import { createElement, Fragment, atom, useAtom, useEffect, style } from lath
+import { createElement, Fragment, atom, useAtom, useEffect, useRef, style } from lath
 
 import tokens from "./tokens.css"
 import sheet from "./theme.css"
@@ -41,19 +41,21 @@ export useTheme() -> array = useAtom(themeAtom)
 // The provider, and the element every stylesheet in this package selects a dark page on.
 //
 // **The `theme` prop SEEDS the atom; it does not control it.** Handing it in writes the atom once,
-// for this render -- and every render after that, including a later `useTheme()` toggle from
-// anywhere in the tree, is the atom's own value. That is what makes the one component right on a
-// server, which renders once and never toggles, and on a page, which never stops.
+// on this instance's first render -- and every render after that, including this very prop staying
+// the same on a later pass and a later `useTheme()` toggle from anywhere in the tree, reads the
+// atom's own value. That is what makes the one component right on a server, which renders once and
+// never toggles, and on a page, which never stops: a page hydrated with the cookie's value does not
+// fight a reader who then toggles it.
 //
 // | | |
 // |---|---|
 // | `<Theme>` with no `theme` | the atom, as it stands -- `"light"` until something seeds or sets it |
 // | `<Theme theme={…} onChange={…}>` | the caller's value, read once off a cookie the server saw |
 //
-// **`onChange`, where given, is called with the theme once after mount and again after every later
-// change** -- from a seed, or from a `useTheme()` toggle anywhere in the tree below. It is how an
-// application reaches a server route to persist a choice the client cannot write itself; see the
-// README for what a page does with it.
+// **`onChange`, where given, is called only on an actual later change** -- from a `useTheme()`
+// toggle anywhere in the tree below. It is never called for the seed and never called on mount,
+// so an application reaching a server route to persist a choice does not post on every page load;
+// see the README for what a page does with it.
 export theme({ theme = null, onChange = null, class: extra = "", children = [] }) =
     style(tokens)
     style(sheet)
@@ -63,14 +65,23 @@ export theme({ theme = null, onChange = null, class: extra = "", children = [] }
     val kids = list("Theme", "children", children)
 
     val [held, setHeld] = useAtom(themeAtom)
+    val seeded = useRef(false)
+    val isFirst = !seeded.current
 
-    if given != null && given != held
-        setHeld(given)
+    if isFirst
+        seeded.current = true
 
-    val now = if given != null then given else resolved(held)
+        if given != null && given != held
+            setHeld(given)
+
+    val now = if isFirst && given != null then given else resolved(held)
+
+    val mounted = useRef(false)
 
     notify() =
-        if handler != null then handler(now)
+        if handler != null && mounted.current then handler(now)
+
+        mounted.current = true
 
         null
 
