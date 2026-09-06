@@ -86,6 +86,15 @@ A_DETAIL_THAT_IS_NOT_TEXT_IS_REFUSED_AND_NO_DETAIL_IS_NOT()
     assertEq(markup(<Confirm open={true} title="Delete?"/>), "")
 
 @test
+AN_ID_THAT_IS_NOT_TEXT_IS_REFUSED()
+    // The title and the detail are identified by it, so an application putting two dialogs on one
+    // page has to be able to say which is which -- and a bad one is caught here rather than as two
+    // elements with the same id.
+    val said = fell(() -> markup(<Confirm open={true} title="Delete?" id={1}/>))
+
+    assert(contains(said, "`id`"))
+
+@test
 A_CLASS_THAT_IS_NOT_TEXT_IS_REFUSED_LIKE_EVERY_OTHER_COMPONENTS()
     val said = fell(() -> markup(<Confirm open={true} title="Delete?" class={3}/>))
 

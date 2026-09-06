@@ -113,6 +113,24 @@ async A_DIALOG_WITH_NO_DETAIL_IS_DESCRIBED_BY_NOTHING()
     assertEq(byId("m-confirm-detail"), null)
 
 @test
+async A_DIALOG_GIVEN_AN_ID_IDENTIFIES_ITS_OWN_TITLE_BY_IT()
+    // **Two dialogs on one page would otherwise write the same two ids**, and an `aria-labelledby`
+    // pointing at a duplicate points at whichever the browser found first.
+    at("")
+
+    mount(<Confirm open={true} id="delete-thread" title="Delete this thread?"
+                   detail="It cannot be undone."/>, domHost("#page"))
+
+    await sleep(1)
+
+    val panel = query(".m-confirm-panel")
+
+    assertEq(attribute(panel, "aria-labelledby"), "delete-thread-title")
+    assertEq(attribute(panel, "aria-describedby"), "delete-thread-detail")
+    assert(byId("delete-thread-title") != null)
+    assertEq(byId("m-confirm-title"), null)
+
+@test
 async THE_SHEET_ARRIVES_WITH_THE_DIALOG_AND_THE_BUTTONS_ARE_THE_LIBRARYS_OWN()
     at("")
 
