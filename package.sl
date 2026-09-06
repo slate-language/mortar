@@ -1,6 +1,6 @@
 {
     name: "mortar",
-    version: "0.2.1",
+    version: "0.3.0",
 
     // **One module, and that is the whole of the public surface.** `mortar.slx` declares every
     // component the library has; the files under `parts/` are where the bodies and the stylesheets
@@ -14,10 +14,11 @@
     main: "mortar.slx",
 
     dependencies: {
-        // The framework. **0.5.1 is the floor and it is not a preference**: `style(css)` is what
-        // puts a component's stylesheet on the page, and 0.5.1 is the release in which a run of text
-        // children and an empty text child hydrate against markup a browser parsed. Every component
-        // here writes both.
-        lath: { git: "github.com/slate-language/lath", version: "0.5.1" },
+        // The framework. **0.6.0 is the floor and it is not a preference**: the theme now lives in
+        // an atom rather than the address bar, and `atom`, `useAtom`, `createStore` and `Provider`
+        // are 0.6.0's. `style(css)` is what puts a component's stylesheet on the page, and every
+        // component here writes both text and empty text children, which 0.5.1 was already the
+        // floor for.
+        lath: { git: "github.com/slate-language/lath", version: "0.6.0" },
     },
 }

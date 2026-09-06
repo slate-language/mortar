@@ -1,15 +1,13 @@
-import { createElement, Fragment, mount, hydrate, html, flush } from lath
+import { createElement, Fragment, mount, hydrate, html, flush, createStore, Provider } from lath
 import { domHost } from lath/dom
-import { location, pushPath } from slate:dom
 import { Button, Theme, useTheme } from "../mortar.slx"
 
 import { at, click, mutations, shown } from "./probe.slx"
 
-// The theme against a real address bar, which is the half a string cannot answer.
+// The theme against a real page, which is the half a string cannot answer.
 //
-// **`useSearch` IS `usePath` UNDERNEATH ON A PAGE**, and `lath/dom` installs that at import -- so
-// importing the host is what turns the theme from a value a server handed in into the address bar
-// itself. That is the whole of why this file is here and not in `tests/theme.slx`.
+// **EACH TEST GETS ITS OWN STORE**, the same isolation `tests/theme.slx` uses -- an atom in a fresh
+// `createStore()` starts at `"light"` regardless of what an earlier test in this file did to it.
 
 // What a page reads and what it presses.
 Toggle(props: object) =
@@ -22,94 +20,54 @@ Toggle(props: object) =
         </Button>
     </Fragment>
 
-App(props: object) = <Theme><Toggle/></Theme>
+App({ theme = null }) = <Theme theme={theme}><Toggle/></Theme>
 
-fresh(from: string) =
-    pushPath(from)
+fresh(theme = null) =
     at("")
 
-    mount(<App/>, domHost("#page"))
+    mount(<Provider store={createStore()}><App theme={theme}/></Provider>, domHost("#page"))
 
 @test
-async THE_THEME_COMES_OFF_THE_ADDRESS_BAR()
-    fresh("/?theme=dark")
+async A_THEME_HANDED_IN_IS_WHAT_THE_PAGE_SHOWS()
+    fresh("dark")
 
     assert(contains(shown(), "data-theme=\"dark\""))
     assert(contains(shown(), "<p id=\"says\">dark</p>"))
 
 @test
-async PRESSING_THE_TOGGLE_REWRITES_THE_ADDRESS_AND_THE_PAGE_FOLLOWS()
-    fresh("/")
-
-    assert(contains(shown(), "data-theme=\"light\""))
-
-    click("button[aria-label=\"theme\"]")
-
-    await sleep(1)
-
-    assertEq(location().query, "?theme=dark")
-    assert(contains(shown(), "data-theme=\"dark\""))
-    assert(contains(shown(), "<p id=\"says\">dark</p>"))
-
-@test
-async LIGHT_IS_THE_ABSENCE_OF_THE_PARAMETER_AND_NOT_FOUR_LETTERS()
-    // **Writing the default out would put a parameter on every URL anybody copied.**
-    fresh("/?theme=dark")
-
-    click("button[aria-label=\"theme\"]")
-
-    await sleep(1)
-
-    assertEq(location().query, "")
-    assert(contains(shown(), "data-theme=\"light\""))
-
-@test
-async THE_TOGGLE_KEEPS_THE_REST_OF_THE_QUERY()
-    // **A toggle that wrote only its own name would throw the page away.** The filter and the sort
-    // order a person is reading under are in the same query as the colour, and pressing the colour
-    // is not a request to go back to an unfiltered board.
-    fresh("/?tag=slate&sort=busiest")
-
-    click("button[aria-label=\"theme\"]")
-
-    await sleep(1)
-
-    assertEq(location().query, "?tag=slate&sort=busiest&theme=dark")
-    assert(contains(shown(), "data-theme=\"dark\""))
-
-    click("button[aria-label=\"theme\"]")
-
-    await sleep(1)
-
-    assertEq(location().query, "?tag=slate&sort=busiest")
-    assert(contains(shown(), "data-theme=\"light\""))
-
-    pushPath("/")
-
-@test
-async A_THEME_IN_THE_ADDRESS_THAT_IS_NEITHER_WORD_IS_THE_DEFAULT()
-    // **An address is whatever a person typed**, so an unrecognised theme renders the default rather
-    // than faulting -- and the toggle above it still works, off that default.
-    fresh("/?theme=chartreuse")
+async WITH_NOTHING_HANDED_IN_THE_PAGE_IS_LIGHT()
+    // **No cookie, no seed, and the atom's own default is the answer.** A server with nothing in
+    // the request's `Cookie` header hands `Theme` no `theme` prop at all, which is this.
+    fresh()
 
     assert(contains(shown(), "data-theme=\"light\""))
     assert(contains(shown(), "<p id=\"says\">light</p>"))
 
+@test
+async PRESSING_THE_TOGGLE_CHANGES_THE_ATOM_AND_THE_PAGE_FOLLOWS()
+    fresh()
+
+    assert(contains(shown(), "data-theme=\"light\""))
+
     click("button[aria-label=\"theme\"]")
 
     await sleep(1)
 
-    assertEq(location().query, "?theme=dark")
     assert(contains(shown(), "data-theme=\"dark\""))
+    assert(contains(shown(), "<p id=\"says\">dark</p>"))
 
-    pushPath("/")
+    click("button[aria-label=\"theme\"]")
+
+    await sleep(1)
+
+    assert(contains(shown(), "data-theme=\"light\""))
 
 @test
 async CHANGING_THE_THEME_TOUCHES_THE_ONE_ATTRIBUTE_AND_THE_LABEL()
-    // **What a custom property carrying the theme buys, measured.** Every colour in the library is a
-    // `var(--m-…)`, so a whole page turning over is one attribute and whatever text actually changed
-    // -- not a class per element and not a second stylesheet.
-    fresh("/")
+    // **What a custom property carrying the theme buys, measured.** Every colour in the library is
+    // a `var(--m-…)`, so a whole page turning over is one attribute and whatever text actually
+    // changed -- not a class per element and not a second stylesheet.
+    fresh()
 
     await sleep(1)
 
@@ -124,12 +82,10 @@ async CHANGING_THE_THEME_TOUCHES_THE_ONE_ATTRIBUTE_AND_THE_LABEL()
 
 @test
 async A_PAGE_RENDERED_DARK_ON_THE_SERVER_HYDRATES_DARK_AND_RECORDS_NOTHING()
-    // **The reason the theme is in the URL rather than in `localStorage`.** A server that can read
-    // the choice off the request renders the right colour the first time; a choice only the browser
-    // knows makes the page flip in front of the reader.
-    pushPath("/?theme=dark")
-
-    val sent = html(mount(<App/>))
+    // **The reason the theme is seeded rather than read off `localStorage`.** A server that reads
+    // the choice off the request's cookie renders the right colour the first time; a choice only
+    // the browser knows makes the page flip in front of the reader.
+    val sent = html(mount(<Provider store={createStore()}><App theme="dark"/></Provider>))
 
     assert(contains(sent, "data-theme=\"dark\""))
 
@@ -139,11 +95,11 @@ async A_PAGE_RENDERED_DARK_ON_THE_SERVER_HYDRATES_DARK_AND_RECORDS_NOTHING()
 
     val before = mutations()
 
-    hydrate(<App/>, domHost("#page"))
+    // **A different store from the server's** -- the client never sees that object, only the
+    // markup and the same cookie value the server read, which is what re-seeds it here.
+    hydrate(<Provider store={createStore()}><App theme="dark"/></Provider>, domHost("#page"))
 
     await sleep(1)
 
     assertEq(mutations() - before, 0)
     assert(contains(shown(), "data-theme=\"dark\""))
-
-    pushPath("/")

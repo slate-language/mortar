@@ -16,7 +16,7 @@
 // | | props |
 // |---|---|
 // | `Theme` | `theme`, `onChange`, `children` -- the provider, and the `data-theme` the sheets select on |
-// | `useTheme()` | `[theme, setTheme]` -- not a hook, so it may be called inside a condition |
+// | `useTheme()` | `[theme, setTheme]` -- a hook, reading and writing the theme atom directly |
 // | `Page` | `brand`, `brandHref`, `nav`, `search`, `footer`, `skipLabel`, `mainId`, `children` |
 // | `Avatar` | `name`, `src`, `size` |
 // | `Byline` | `name`, `src`, `href`, `at`, `size` |

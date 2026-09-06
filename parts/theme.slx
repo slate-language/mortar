@@ -1,17 +1,18 @@
-// The theme: a value handed to a whole subtree, and the attribute the stylesheets select on.
+// The theme: a value in an atom outside any component's own tree, and the attribute the
+// stylesheets select on.
 //
-// **THE THEME IS IN THE URL, AND THAT IS THE DECISION THIS FILE IS MADE OF.** `?theme=dark` is
-// something a person can bookmark, send to somebody else and press back out of; the same choice put
-// in `useState` vanishes on reload, and put in `localStorage` is invisible to the server -- which
-// means the server renders a light page, the browser adopts it, and the page then flips to dark in
-// front of the reader. A server that can read the choice off the request renders the right page the
-// first time, and there is nothing to flash.
+// **THE THEME IS A COOKIE, NOT A QUERY PARAMETER, AND THAT IS THE DECISION THIS FILE IS MADE OF.**
+// A choice in the address bar is a choice about *that page*; a reader who prefers dark wants it on
+// every page, without asking again -- which is what a cookie is for and a query string is not. The
+// **server** reads its own cookie and seeds a fresh atom for the request (see the README); the
+// **client** writes the cookie back when the reader changes it, so the choice outlives the tab and
+// the very next request already renders the right colour -- there is nothing to flash and nothing
+// for a hydrating page to correct.
 //
-// **The cookie form is the same component with the value handed in**, and it is what an application
-// picks when it would rather not spend a query parameter. See `Theme`'s note below.
+// **The atom is the only source of truth once seeded.** `useTheme()` reads and writes it directly
+// and needs no `Theme` above it to do either.
 
-import { createElement, Fragment, createContext, useContext, style } from lath
-import { useSearch } from lath/router
+import { createElement, Fragment, atom, useAtom, useEffect, style } from lath
 
 import tokens from "./tokens.css"
 import sheet from "./theme.css"
@@ -20,59 +21,39 @@ import { choice, classes, maybeFn, list } from "./props.sl"
 // The two words, in one place, so that a message listing them cannot drift from the check.
 export val Themes = ["light", "dark"]
 
-// What a `useTheme` with no `Theme` above it is holding.
-//
-// **A default rather than a fault**, which is `useContext`'s own rule and is what lets a single
-// component be rendered on its own in a test. The setter is the half that cannot have a sensible
-// default, so it says so.
-noTheme(next) =
-    throw "useTheme's setter needs a `Theme` above the component that called it, and there is none"
+// Every `Theme` and every `useTheme()` reads and writes this one atom -- module-level, so a
+// component with no `Theme` above it still has somewhere to read from.
+export val themeAtom = atom("light")
 
-val Chosen = createContext({ theme: "light", set: noTheme })
+// A value that is not one of the two words displays as "light" and never faults -- an atom, unlike
+// a prop, is not something this component can refuse on the caller's behalf.
+resolved(value) =
+    if Themes.indexOf(value) != null then value else "light"
 
 // The theme, and a way to change it.
 //
 //     val [theme, setTheme] = useTheme()
 //
-// **It is not a hook** -- `useContext` keeps no slot -- so unlike `useState` it may be called inside
-// a condition, which is the ordinary case for a component that only sometimes renders the thing the
-// theme is about.
-export useTheme() -> array =
-    val held = useContext(Chosen)
-
-    [held.theme, held.set]
+// **It is a hook.** `useAtom` keeps a slot, so unlike the old context form it may not be called
+// inside a condition.
+export useTheme() -> array = useAtom(themeAtom)
 
 // The provider, and the element every stylesheet in this package selects a dark page on.
 //
-// **Two arrangements, and the prop is which one.**
+// **The `theme` prop SEEDS the atom; it does not control it.** Handing it in writes the atom once,
+// for this render -- and every render after that, including a later `useTheme()` toggle from
+// anywhere in the tree, is the atom's own value. That is what makes the one component right on a
+// server, which renders once and never toggles, and on a page, which never stops.
 //
 // | | |
 // |---|---|
-// | `<Theme>` with no `theme` | the URL: `?theme=dark`, read with `useSearch` and rewritten by `set` |
-// | `<Theme theme={…} onChange={…}>` | the caller's: a cookie the server read, a column on an account |
+// | `<Theme>` with no `theme` | the atom, as it stands -- `"light"` until something seeds or sets it |
+// | `<Theme theme={…} onChange={…}>` | the caller's value, read once off a cookie the server saw |
 //
-// **The URL form is the one to reach for**, and the reason is the server: a page rendered for
-// `/?theme=dark` is dark in the markup, so there is no first paint in the wrong colours and nothing
-// for a hydrating page to correct. The cookie form buys a URL with nothing in it and costs the
-// application a `Set-Cookie` route and a `back` field; it is written here because an application
-// that already has an accounts table would rather keep the choice there.
-//
-// **`set` REWRITES the address rather than pushing it**, which is `useSearch`'s own default and the
-// right one here: changing a theme is not somewhere a person went, and a push would make the back
-// button undo the colour rather than the page.
-//
-// **`theme=light` is the absence of the parameter.** Writing the default out would put a parameter
-// on every URL anybody copied, so `set("light")` takes it off.
-//
-// **`set` KEEPS THE REST OF THE QUERY**, which is not a nicety: a theme toggle on
-// `/?tag=slate&sort=busiest` that wrote only its own name would throw the filter and the sort order
-// away, and the page a person was reading would be gone along with the colour they wanted changed.
-//
-// **A `?theme` nobody recognises is the default, and says nothing.** The address is whatever a
-// person typed or a link they followed carried, so `/?theme=chartreuse` is not a mistake anybody
-// reading the page can fix -- and a fault there is a 500 on a server for a value a stranger chose.
-// The `theme` *prop* is the opposite case: it comes from the program, so a word that is neither of
-// the two still refuses and still names the prop.
+// **`onChange`, where given, is called with the theme once after mount and again after every later
+// change** -- from a seed, or from a `useTheme()` toggle anywhere in the tree below. It is how an
+// application reaches a server route to persist a choice the client cannot write itself; see the
+// README for what a page does with it.
 export theme({ theme = null, onChange = null, class: extra = "", children = [] }) =
     style(tokens)
     style(sheet)
@@ -81,35 +62,18 @@ export theme({ theme = null, onChange = null, class: extra = "", children = [] }
     val handler = maybeFn("Theme", "onChange", onChange)
     val kids = list("Theme", "children", children)
 
-    // **The hook is taken whether or not this render uses it**, which is the rule every hook has: a
-    // `Theme` whose `theme` prop arrives on the second render would otherwise change its own hook
-    // layout between renders.
-    val search = useSearch()
-    val query = search[0]
-    val write = search[1]
+    val [held, setHeld] = useAtom(themeAtom)
 
-    // What the address asked for, and the default where it asked for something that is not a theme.
-    val asked = query.theme ?? "light"
-    val inUrl = if asked is string && Themes.indexOf(asked) != null then asked else "light"
+    if given != null && given != held
+        setHeld(given)
 
-    val now = if given != null then given else inUrl
+    val now = if given != null then given else resolved(held)
 
-    // Where a change goes, which is the whole difference between the two arrangements.
-    set(next) =
-        val wanted = choice("Theme", "theme", next, Themes)
-
-        if given != null
-            if handler == null
-                throw "Theme was given a `theme`, so changing it needs an `onChange`, and there is none"
-
-            handler(wanted)
-        else
-            write(query with { theme: if wanted == "light" then null else wanted })
+    notify() =
+        if handler != null then handler(now)
 
         null
 
-    val out = <Chosen.Provider value={{ theme: now, set: set }}>
-        <div class={classes("Theme", "mortar", extra)} data-theme={now}>{kids}</div>
-    </Chosen.Provider>
+    useEffect(notify, [now])
 
-    out
+    <div class={classes("Theme", "mortar", extra)} data-theme={now}>{kids}</div>

@@ -71,7 +71,7 @@ Toast's `messages`, item 1, has no `id`
 | | props |
 |---|---|
 | `Theme` | `theme`, `onChange`, `children` |
-| `useTheme()` | `[theme, setTheme]` |
+| `useTheme()` | `[theme, setTheme]` -- a hook, reading and writing the theme atom directly |
 | `Page` | `brand`, `brandHref`, `nav`, `search`, `footer`, `skipLabel`, `mainId`, `children` |
 | `VisuallyHidden` | `tag`, `children` |
 | `Avatar` | `name`, `src`, `size` |
@@ -173,14 +173,16 @@ component. **Every transition and animation takes its duration from one of two t
 `prefers-reduced-motion: reduce` sets both to zero in one block — so a component written next year is
 covered before it is written.
 
-## Theming, and why the theme is in the URL
+## Theming, and why the theme is a cookie
 
 `Theme` renders `<div class="mortar" data-theme="light">` and every colour in the library is a
 `var(--m-…)` re-declared under `[data-theme="dark"]` — so a whole page turning over is one attribute,
 not a class per element and not a second stylesheet. `tests-dom/theme.slx` measures it: three
 mutation records for a page going dark.
 
-**With no `theme` prop, the choice is `?theme=dark` in the address, read with lath's `useSearch`.**
+**The theme lives in `themeAtom`, a plain lath atom, and `useTheme()` is `useAtom(themeAtom)`.** It
+is a hook now, not the context-and-`useSearch` pair earlier versions used — it needs no `Theme` above
+it to read from or write to.
 
 ```slate
 val [theme, setTheme] = useTheme()
@@ -190,22 +192,49 @@ val [theme, setTheme] = useTheme()
 </Button>
 ```
 
-That is the arrangement to reach for, and the reason is the **server**: a page rendered for
-`/?theme=dark` is dark in the markup, so there is no first paint in the wrong colours and nothing for
-a hydrating page to correct. A choice kept in `localStorage` is invisible to the server, and the page
-flips in front of the reader. `set` rewrites the address rather than pushing it — changing a theme is
-not somewhere anybody went — and `theme=light` is the absence of the parameter, so a copied URL has
-nothing in it that did not need to be there.
+**A reader's choice belongs to them, not to the page they were on, which is what a cookie is for and
+a query string is not.** `?theme=dark` said something about *that address*; a cookie says something
+about the reader, and is there again on the next request whichever page they land on next.
 
-**The cookie form is the same component with the value handed in**: the server reads its own cookie
-and passes `theme`, and `onChange` posts a form that sets it.
+**The server seeds the atom from the request's cookie, one store per request:**
 
 ```slate
-<Theme theme={fromTheCookie} onChange={(next) -> post("/theme", { theme: next })}>
+import { api } from sluice
+import { createElement, mount, html, createStore, Provider } from lath
+import { Theme } from mortar
+
+app.get("/", (req) ->
+    { body: html(mount(
+        <Provider store={createStore()}>
+            <Theme theme={req.cookies.theme}><Page/></Theme>
+        </Provider>
+    )) }
+)
 ```
 
-It buys a URL with nothing in it and costs a route and a `Set-Cookie`. `useTheme` is **not a hook**
-in either arrangement — it keeps no slot, so it may be called inside a condition.
+`createStore()` plus `<Provider>` gives each request its own atom, so two requests rendered by one
+process never see each other's theme; `Theme`'s `theme` prop **seeds** that store's atom from the
+cookie — `req.cookies.theme` is `null` when there is none, and a `Theme` with no `theme` prop reads
+the atom exactly as it stands, `"light"` until something seeds or sets it. A cookie holding neither
+word renders light rather than faulting, the same as an unrecognised address parameter used to.
+
+**Seeding writes the atom once, for that render — it does not keep controlling it.** A page that
+renders `<Theme theme={x}>` on every render is not fought by its own toggle: `useTheme()`'s setter,
+called from anywhere in the tree, is the atom's own value from then on.
+
+**The client writes the cookie back when the reader changes it — except there is currently no way to
+do that from `slate:dom`.** `slate:dom` has `location`, `history` and `localStorage` and nothing that
+reads or writes `document.cookie`; this is a gap in the host rather than something worth routing
+around with raw JavaScript. Until it exists, `onChange` is the persistence mechanism: called with the
+theme once after mount and again after every later change, so a page can reach a server route instead.
+
+```slate
+<Theme onChange={(next) -> post("/theme", { theme: next })}>
+```
+
+That route sets the cookie server-side, with `slate:http`'s `setCookie`, and the *next* request
+already renders the right colour — which is everything a client-written cookie would have bought,
+one round trip later.
 
 ## Server-rendered first, and hydration-clean
 
@@ -240,9 +269,10 @@ so it cannot change by accident.
 
 ## Requirements
 
-slate **0.0.30** or newer, and lath **0.5.1** or newer. The lath floor is not a preference: `style(css)`
-is where a component's stylesheet comes from, and 0.5.1 is the release in which a run of text children
-and an empty text child hydrate against markup a browser parsed — which every component here writes.
+slate **0.0.30** or newer, and lath **0.6.0** or newer. The lath floor is not a preference: the theme
+lives in an atom, and `atom`, `useAtom`, `createStore` and `Provider` are 0.6.0's. `style(css)` is
+where a component's stylesheet comes from, and every component here also relies on 0.5.1's fix for a
+run of text children and an empty text child hydrating against markup a browser parsed.
 
 ## Licence
 

@@ -27,29 +27,30 @@ component knows the value and the application knows what a value means as a URL.
 
 | prop | default | what it is |
 |---|---|---|
-| `theme` | `null` | `"light"` or `"dark"`. With none, the theme is read from `?theme` in the URL |
-| `onChange` | `null` | called with the new theme where `theme` was given |
+| `theme` | `null` | `"light"` or `"dark"`. With none, the theme is whatever `themeAtom` already holds |
+| `onChange` | `null` | called with the theme once after mount, and again after every later change |
 | `children` | `[]` | |
 
 Renders `<div class="mortar" data-theme="…">`, which is what every stylesheet in the library selects
-a dark page on, and provides the value `useTheme` reads.
+a dark page on. The value comes from a module-level atom, `themeAtom`, that every `Theme` and every
+`useTheme()` read and write directly.
 
-**Setting the theme keeps the rest of the query.** `set("dark")` on `/?tag=slate&sort=busiest`
-writes `/?tag=slate&sort=busiest&theme=dark`, and `set("light")` takes the name back off — the
-default is the absence of the parameter, not four letters on every URL anybody copied.
+**`theme` seeds the atom; it does not control it.** Handing it in writes the atom once, for this
+render; a later `useTheme()` toggle from anywhere in the tree is the atom's own value after that,
+not fought by a `theme` prop a caller kept passing. The ordinary use is a server seeding a fresh
+per-request store from the request's cookie — see the README's "Theming" section.
 
-**A `?theme` that is neither word is the default, quietly.** The address is whatever a person typed
-or a link carried, so `/?theme=chartreuse` renders light rather than faulting; a fault there would be
-a 500 served for a stranger's spelling, with nobody reading the page able to fix it.
+**An atom holding something that is neither word is the default, quietly.** A `theme` prop is the
+program's own value and refuses if it is neither word; the atom is not something `Theme` can refuse
+on the caller's behalf; the same default applies rather than a fault.
 
 **Refuses**: a `theme` prop that is neither word — that one comes from the program, so it is the
-program's mistake and says so; a `set` on a controlled `Theme` with no `onChange`.
+program's mistake and says so.
 
 ## `useTheme()`
 
-Answers `[theme, setTheme]`. **Not a hook** — it keeps no slot, so it may be called inside a
-condition. With no `Theme` above it, the theme is `"light"` and the setter says so rather than doing
-nothing.
+Answers `[theme, setTheme]`, straight off `themeAtom` — it **is** a hook. With no `Theme` above it,
+the theme is `"light"` until something seeds or sets it, and the setter always works.
 
 ## Page
 
