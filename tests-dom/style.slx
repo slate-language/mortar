@@ -21,7 +21,7 @@ countOf(s: string, sub: string) -> integer =
         if found_at == null then break
 
         found = found + 1
-        from = from + found_at + sub.len()
+        from = from + found_at + sub.length
 
     found
 

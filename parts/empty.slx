@@ -25,7 +25,7 @@ export emptyState({ title = "Nothing here", detail = null, class: extra = "", ch
     val out = <div class={classes("EmptyState", "m-empty", extra)} role="status">
         <h2>{head}</h2>
         {if said == null then null else <p>{said}</p>}
-        {if len(kids) == 0 then null else <p class="m-do">{kids}</p>}
+        {if kids.length == 0 then null else <p class="m-do">{kids}</p>}
     </div>
 
     out

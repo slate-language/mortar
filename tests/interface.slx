@@ -50,7 +50,7 @@ EVERY_CLOSED_SET_OF_WORDS_IS_A_LIST_OF_WORDS()
 
         if value == null then throw "this library does not export `" + name + "`"
         if !(value is array) then throw "`" + name + "` is exported and is not a list"
-        if len(value) == 0 then throw "`" + name + "` is exported and is empty"
+        if value.length == 0 then throw "`" + name + "` is exported and is empty"
 
         for one in value
             if !(one is string) then throw "`" + name + "` holds something that is not a word"
@@ -59,7 +59,7 @@ EVERY_CLOSED_SET_OF_WORDS_IS_A_LIST_OF_WORDS()
 THE_INTERFACE_IS_THIRTY_NINE_NAMES_AND_NOTHING_ELSE()
     // **A count, so that a name added to one library and not the other is caught here** rather than
     // in an application that imported it.
-    assertEq(len(Components) + len(Functions) + len(Words), 39)
+    assertEq(Components.length + Functions.length + Words.length, 39)
 
 @test
 THE_WORDS_ARE_THE_ONES_THE_COMPONENTS_ACTUALLY_CHECK()

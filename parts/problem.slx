@@ -56,11 +56,11 @@ export problem({ problem: doc = null, title = null, detail = null, status = null
     val head = maybeText("Problem", "title", title) ?? textOf(whole, "title")
     val body = maybeText("Problem", "detail", detail) ?? textOf(whole, "detail")
     val code = numberOf("Problem", status, whole)
-    val rows = if len(list("Problem", "errors", errors)) > 0 then errors else listOf(whole)
+    val rows = if list("Problem", "errors", errors).length > 0 then errors else listOf(whole)
 
     // **Nothing at all where there is no problem**, which is what lets a page write `<Problem
     // detail={note}/>` unconditionally and hold no branch of its own.
-    if head == null && body == null && len(rows) == 0 then return null
+    if head == null && body == null && rows.length == 0 then return null
 
     val sentence = body ?? head
     val heading = if body == null || head == null then null else head
@@ -71,7 +71,7 @@ export problem({ problem: doc = null, title = null, detail = null, status = null
     val out = <div class={classes("Problem", "m-problem", extra)} role="alert">
         {if heading == null then null else <p class="m-title">{heading}</p>}
         <p>{sentence ?? ""}{if code == null then null else <span class="m-status">{code}</span>}</p>
-        {if len(rows) == 0 then null else <ul>{rows.map(one)}</ul>}
+        {if rows.length == 0 then null else <ul>{rows.map(one)}</ul>}
     </div>
 
     out

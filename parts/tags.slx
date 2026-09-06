@@ -54,7 +54,7 @@ export tagList({ tags = [], href = null, current = null, onChoose = null, class:
 
     // **Nothing at all where there are no tags**, rather than an empty `<ul>`: a list element with no
     // items is announced as a list of nothing, which is a thing a reader has to listen past.
-    if len(all) == 0 then return null
+    if all.length == 0 then return null
 
     // **Each tag is inside an `<li>` and the `<li>` is what carries the key.** A `<ul>` may hold
     // nothing but list items, and a library that put anchors straight into one would be shipping

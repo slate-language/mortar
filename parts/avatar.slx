@@ -37,4 +37,4 @@ export avatar({ name = "?", src = null, size = "small", class: extra = "" }) =
 // **`upper` of the first character and not of the whole string**, a name being somebody's own
 // spelling of it everywhere except in this one circle.
 initial(who: string) -> string =
-    if len(who) == 0 then "?" else upper(who[0..<1])
+    if who.length == 0 then "?" else upper(who[0..<1])
