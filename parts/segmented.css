@@ -23,8 +23,17 @@
     background: var(--m-sunken);
     vertical-align: middle;
 
+    /* **A segment is styled the same whether it is an anchor or a button.** A choice with an address
+     * is an `<a>` and one with only a handler is a `<button>`, and a button arrives with the browser's
+     * own face, border and typeface -- which is what these four lines take away, so the two shapes
+     * are told apart by nothing a reader can see. */
     & .m-seg {
         display: inline-block;
+        appearance: none;
+        border: 0;
+        background: transparent;
+        font: inherit;
+        cursor: pointer;
         padding: var(--m-space-1) var(--m-space-4);
         border-radius: var(--m-pill);
         font-size: var(--m-text-ui);
