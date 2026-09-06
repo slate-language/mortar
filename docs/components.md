@@ -204,8 +204,8 @@ An empty list renders **nothing at all**, rather than a `<ul>` announced as a li
 | `onChoose` | `null` | called with the page number |
 | `unit` | `"items"` | the word after the total |
 
-A step with nowhere to go is a `<span>` and not a disabled link — **there is no such thing as a
-disabled anchor.**
+A step with nowhere to go does not render at all — not a disabled link, since **there is no such
+thing as a disabled anchor.**
 
 ## Segmented
 

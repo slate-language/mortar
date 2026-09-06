@@ -29,16 +29,17 @@ export pagination({ page = 1, size = 20, total = 0, href = null, onChoose = null
 
     val pages = if all == 0 then 1 else ((all + per - 1) / per)
 
-    // **A step that has nowhere to go is a `<span>` and not a disabled link.** There is no such thing
-    // as a disabled anchor: a keyboard still stops on one, and `aria-disabled` on a link that still
-    // navigates is a lie the browser does not read.
+    // **A step that has nowhere to go does not render at all.** Not a disabled anchor -- there is no
+    // such thing: a keyboard still stops on one, and `aria-disabled` on a link that still navigates
+    // is a lie the browser does not read -- and not inert text either, which reads as a control that
+    // stopped working. An invisible placeholder holds its place so the page count does not shift.
     val back = if at <= 1 then null else if to == null then null else to(at - 1)
     val on = if at >= pages then null else if to == null then null else to(at + 1)
 
     val out = <nav class={classes("Pagination", "m-pager", extra)} aria-label="Pages">
-        <Choice class="m-step" href={back} value={at - 1} onChoose={chose}>previous</Choice>
+        {if back == null then <span class="m-step m-gone"/> else <Choice class="m-step" href={back} value={at - 1} onChoose={chose}>previous</Choice>}
         <span class="m-where">page {at} of {pages}<span class="m-total">{all} {what}</span></span>
-        <Choice class="m-step" href={on} value={at + 1} onChoose={chose}>next</Choice>
+        {if on == null then <span class="m-step m-gone"/> else <Choice class="m-step" href={on} value={at + 1} onChoose={chose}>next</Choice>}
     </nav>
 
     out

@@ -5,9 +5,10 @@
  * hit with a thumb -- and *page 2 of 3, 45 threads* is set as text, tabular, so it does not shift
  * as the numbers get wider.
  *
- * **A step with nowhere to go loses its border rather than greying out inside it.** It is a
- * `<span>` and not a disabled link, so it should not look like a button that has stopped working;
- * it should look like there is nothing there.
+ * **A step with nowhere to go is not there at all** -- not a greyed-out button, since that reads as
+ * a control that has stopped working rather than one that was never offered. An invisible
+ * placeholder the same shape as a step takes its slot, so the page count stays centred whether
+ * either, both or neither step is showing.
  */
 
 .m-pager {
@@ -41,10 +42,8 @@
 
         &:active { background: color-mix(in oklab, var(--m-accent) 18%, transparent); }
 
-        &.m-off {
-            border-color: transparent;
-            background: none;
-            color: var(--m-ink-faint);
+        &.m-gone {
+            visibility: hidden;
         }
     }
 

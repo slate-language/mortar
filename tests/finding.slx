@@ -135,19 +135,34 @@ A_PAGER_SAYS_WHERE_IT_IS_AND_HOW_MANY_THERE_ARE()
     assert(contains(out, "<span class=\"m-total\">45 threads</span>"))
     assert(contains(out, "href=\"/?page=1\""))
     assert(contains(out, "href=\"/?page=3\""))
+    assert(contains(out, ">previous</a>"))
+    assert(contains(out, ">next</a>"))
 
 @test
-A_STEP_WITH_NOWHERE_TO_GO_IS_A_SPAN_AND_NOT_A_DISABLED_LINK()
+A_STEP_WITH_NOWHERE_TO_GO_DOES_NOT_RENDER()
     // **There is no such thing as a disabled anchor**: a keyboard still stops on one, and
-    // `aria-disabled` on a link that still navigates is a lie the browser does not read.
+    // `aria-disabled` on a link that still navigates is a lie the browser does not read. A step
+    // with nowhere to go is not drawn at all -- not even as inert text -- and its slot is held by
+    // an invisible placeholder so the page count does not jump sideways.
     val first = markup(<Pagination page={1} size={20} total={45} href={(n) -> "/?page=" + string(n)}/>)
 
-    assert(contains(first, "<span class=\"m-step m-off\">previous</span>"))
+    assert(!contains(first, "previous"))
+    assert(contains(first, "<span class=\"m-step m-gone\">"))
     assert(contains(first, "<a class=\"m-step\" href=\"/?page=2\">next</a>"))
 
     val last = markup(<Pagination page={3} size={20} total={45} href={(n) -> "/?page=" + string(n)}/>)
 
-    assert(contains(last, "<span class=\"m-step m-off\">next</span>"))
+    assert(!contains(last, "next"))
+    assert(contains(last, "<span class=\"m-step m-gone\">"))
+    assert(contains(last, "<a class=\"m-step\" href=\"/?page=2\">previous</a>"))
+
+@test
+A_SINGLE_PAGE_SHOWS_NEITHER_STEP()
+    val out = markup(<Pagination page={1} total={0} href={(n) -> "/?page=" + string(n)}/>)
+
+    assert(contains(out, "page 1 of 1"))
+    assert(!contains(out, "previous"))
+    assert(!contains(out, "next"))
 
 @test
 AN_EMPTY_LIST_IS_ONE_PAGE_AND_NOT_ZERO()

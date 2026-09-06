@@ -110,11 +110,12 @@ async A_PAGE_NUMBER_IS_THE_SAME_ARRANGEMENT_AND_HANDS_OVER_THE_NUMBER()
 
 @test
 async A_STEP_WITH_NOWHERE_TO_GO_IS_NOT_A_TARGET_AT_ALL()
-    // **There is no such thing as a disabled anchor**, so the first page's *previous* is a `<span>`
-    // and a keyboard walks straight past it.
+    // **There is no such thing as a disabled anchor**, so the first page's *previous* is not drawn
+    // at all and a keyboard walks straight past its slot.
     fresh(<Pagination page={1} size={20} total={45} href={(n) -> "/?page=" + string(n)}/>)
 
-    assert(contains(shown(), "<span class=\"m-step m-off\">previous</span>"))
+    assertEq(indexOf(shown(), "previous"), null)
+    assert(contains(shown(), "<span class=\"m-step m-gone\">"))
     assertEq(indexOf(shown(), "<a class=\"m-step\" href=\"/?page=0\""), null)
 
 @test
