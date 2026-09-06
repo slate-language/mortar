@@ -82,15 +82,17 @@ export theme({ theme = null, onChange = null, class: extra = "", children = [] }
     // **The cookie write shares the mount guard with `onChange`** -- never for the seed and never
     // for a prop staying the same, only for a later `useTheme()` toggle. `setCookie` is `slate:dom`'s
     // and every one of that module's names faults under the interpreter and under a server that is
-    // not a browser; `catch` is how this file tells the two apart without asking, since nothing a
-    // shared component can import answers "am I in a browser" directly. A real browser, and the
-    // jsdom document the DOM suite installs, both let it through; anywhere else the write is simply
-    // not there to make, exactly like the `onChange` this sits beside.
+    // not a browser, so the call is guarded by `host()`, the one global every host answers directly
+    // -- exactly as `docs/library/dom.md` says a shared file with no control over where it runs
+    // should. A real browser, and the jsdom document the DOM suite installs, both answer
+    // `"browser"`; anywhere else the write is simply not there to make, exactly like the `onChange`
+    // this sits beside.
     notify() =
         if mounted.current
             if handler != null then handler(now)
 
-            setCookie("theme", now, { path: "/", maxAge: 31536000, sameSite: "Lax" }) catch e -> null
+            if host() == "browser"
+                setCookie("theme", now, { path: "/", maxAge: 31536000, sameSite: "Lax" })
 
         mounted.current = true
 
