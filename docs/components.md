@@ -177,10 +177,14 @@ A `<div>`. `ThreadCard` is an `<li>`, which is what `CardList` is a `<ul>` for.
 | prop | default | what it is |
 |---|---|---|
 | `label` | `""` | |
-| `href` | `null` | with none it is a `<span>` |
+| `href` | `null` | with `onChoose` and no `href` it is a `<button type="button">`; with neither it is a `<span>` |
 | `count` | `null` | rendered inside the link, so the whole pill is one target |
 | `current` | `false` | `aria-current="true"` |
 | `onChoose` | `null` | called with the label on a plain left click, which is then prevented |
+
+**With `href`, a tag is an anchor. With only `onChoose` and no `href`, it is a `<button
+type="button">` instead** — the shape for a tag with no address, such as one that only filters a
+list already on the page.
 
 ## TagList
 
@@ -191,7 +195,8 @@ A `<div>`. `ThreadCard` is an `<li>`, which is what `CardList` is a `<ul>` for.
 | `current` | `null` | the label being filtered by |
 | `onChoose` | `null` | |
 
-An empty list renders **nothing at all**, rather than a `<ul>` announced as a list of nothing.
+An empty list renders **nothing at all**, rather than a `<ul>` announced as a list of nothing. Each
+tag follows `Tag`'s own three shapes above.
 
 ## Pagination
 

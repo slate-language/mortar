@@ -41,6 +41,15 @@ A_CURRENT_THAT_IS_NOT_A_BOOLEAN_NAMES_THE_PROP()
     // differently depending on which back end rendered the page. It is a boolean or it is a mistake.
     assert(contains(fell(() -> markup(<Tag label="x" current={1}/>)), "`current` is true or false"))
 
+@test
+A_TAG_WITH_NO_HREF_BUT_ONCHOOSE_IS_A_BUTTON()
+    // **A tag that only filters a list already on the page has nothing to put in `href`**, so
+    // `onChoose` alone still makes a real, focusable control rather than the inert `<span>` a tag
+    // with neither prop is.
+    val out = markup(<Tag label="slate" onChoose={(v) -> null}/>)
+
+    assertEq(out, "<button type=\"button\" class=\"m-tag\">slate</button>")
+
 // -- TagList -------------------------------------------------------------------------------------------
 
 @test
@@ -83,6 +92,16 @@ A_TAG_ROW_WITH_NO_LABEL_NAMES_THE_PROP()
 @test
 TAGS_THAT_ARE_NOT_A_LIST_NAME_THE_PROP()
     assert(contains(fell(() -> markup(<TagList tags="slate"/>)), "TagList's `tags` is a list"))
+
+@test
+A_TAG_LIST_WITH_ONCHOOSE_AND_NO_HREF_IS_BUTTONS()
+    // Each tag follows `Tag`'s own three shapes -- with `onChoose` and no `href` per tag, every one
+    // renders as a `<button type="button">` and not the inert `<span>`.
+    val out = markup(<TagList tags={["a", "b"]} onChoose={(v) -> null}/>)
+
+    assert(!contains(out, "<a "))
+    assert(!contains(out, "m-off"))
+    assertEq(countOf(out, "<button type=\"button\" class=\"m-tag\""), 2)
 
 // -- Segmented -----------------------------------------------------------------------------------------
 
