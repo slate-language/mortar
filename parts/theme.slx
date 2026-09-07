@@ -13,7 +13,7 @@
 // and needs no `Theme` above it to do either.
 
 import { createElement, Fragment, atom, useAtom, useEffect, useRef, style } from lath
-import { setCookie } from slate:dom
+import { setCookie } from dom
 
 import tokens from "./tokens.css"
 import sheet from "./theme.css"
@@ -80,7 +80,7 @@ export theme({ theme = null, onChange = null, class: extra = "", children = [] }
     val mounted = useRef(false)
 
     // **The cookie write shares the mount guard with `onChange`** -- never for the seed and never
-    // for a prop staying the same, only for a later `useTheme()` toggle. `setCookie` is `slate:dom`'s
+    // for a prop staying the same, only for a later `useTheme()` toggle. `setCookie` is `dom`'s
     // and every one of that module's names faults under the interpreter and under a server that is
     // not a browser, so the call is guarded by `host()`, the one global every host answers directly
     // -- exactly as `docs/library/dom.md` says a shared file with no control over where it runs

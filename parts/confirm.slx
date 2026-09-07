@@ -1,6 +1,6 @@
 // The question asked in front of something that cannot be taken back.
 //
-// **NOT A NATIVE `<dialog>`.** `slate:dom` has no `showModal`, so there is nothing to open a native
+// **NOT A NATIVE `<dialog>`.** `dom` has no `showModal`, so there is nothing to open a native
 // dialog with and nothing to close one with; what is here is a backdrop and a panel carrying
 // `role="dialog"` and `aria-modal="true"`, which is what a browser gives a native dialog anyway.
 //
@@ -12,8 +12,8 @@
 //
 // **IT GOES THROUGH A PORTAL INTO THE BODY**, which is what lets a `Confirm` written inside a list
 // row escape the row -- a row with `overflow`, a `position` or a `z-index` of its own would otherwise
-// clip the panel or stack something over it. The container is held in a `useMemo`, because `query`
-// mints a fresh handle every call and a portal handed a different container is a different portal.
+// clip the panel or stack something over it. The container is held in a `useMemo`, so a re-render
+// hands the portal the same container it had before rather than a fresh call to `query`.
 //
 // The shape it is being built to:
 //
@@ -21,9 +21,9 @@
 //              confirmLabel="Delete" cancelLabel="Cancel" tone="danger"
 //              onConfirm={remove} onCancel={() -> setAsking(false)}/>
 //
-// **What the focus rules are, and how each one is reachable from slate.** A node is an integer handle
-// and `byId` mints a fresh one every call, so identity is asked of the page rather than of the
-// handle: the two buttons carry a `data-m-confirm` of `"cancel"` and `"confirm"`, and
+// **What the focus rules are, and how each one is reachable from slate.** A node is the element
+// itself, but identity is still asked of the page rather than compared directly: the two buttons
+// carry a `data-m-confirm` of `"cancel"` and `"confirm"`, and
 // `attribute(activeElement(), "data-m-confirm")` is how the trap knows where the caret is.
 //
 // - Opening remembers `activeElement()` and focuses the cancel button, which is the safe one.
@@ -41,7 +41,7 @@
 // two answers to one question. No other component's appearance changes.
 
 import { createElement, Fragment, createPortal, useMemo, useRef, useEffect, style } from lath
-import { query, focus, activeElement, attribute, property } from slate:dom
+import { query, focus, activeElement, attribute, property } from dom
 
 import tokens from "./tokens.css"
 import buttons from "./button.css"
@@ -52,7 +52,7 @@ import { choice as oneOf, classes, flag, maybeFn, maybeText, text } from "./prop
 
 // Where the panel goes, and the same call is the answer to *"is there a page at all"*.
 //
-// **`host()` and not a `catch` around the call.** Every `slate:dom` name faults where there is no
+// **`host()` and not a `catch` around the call.** Every `dom` name faults where there is no
 // document, so a guard could be written either way -- but a `catch` would swallow a genuine fault
 // from a genuine browser just as quietly, and this component's whole behaviour hangs off the
 // answer. `host()` answers `"browser"` in a browser and under the jsdom document the DOM suite
@@ -141,9 +141,9 @@ export confirm({ open = false, title = null, detail = null, confirmLabel = "Conf
         null
 
     // **Escape cancels, and Tab cycles the two buttons and nothing else** -- the panel's own
-    // buttons being the whole of what a trap has to hold. A node handle is a fresh integer every
-    // query, so where the caret is is asked of the page: `data-m-confirm` is the identity, and the
-    // other one of the two words is where Tab goes.
+    // buttons being the whole of what a trap has to hold. Where the caret is is asked of the page
+    // rather than compared as a node: `data-m-confirm` is the identity, and the other one of the
+    // two words is where Tab goes.
     keyed(e) =
         if e.key == "Escape"
             e.prevent()

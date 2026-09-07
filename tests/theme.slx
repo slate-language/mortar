@@ -201,7 +201,7 @@ ONCHANGE_IS_NOT_CALLED_ON_MOUNT_AND_IS_CALLED_ONCE_PER_LATER_TOGGLE()
 
 @test
 A_SEED_AND_A_TOGGLE_DO_NOT_FAULT_WHERE_THERE_IS_NO_BROWSER()
-    // **`Theme` writes a cookie on a real change now, and `slate:dom`'s `setCookie` faults under
+    // **`Theme` writes a cookie on a real change now, and `dom`'s `setCookie` faults under
     // both hosts this file runs on** -- the interpreter and plain node with `--js`, neither a
     // browser. `Theme` checks `host() == "browser"` before ever making that call, which is what
     // keeps the fault from reaching here; this test is the seed and the toggle both going through

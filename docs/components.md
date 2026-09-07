@@ -406,7 +406,7 @@ was always going to submit. Every other component in this library renders on bot
 inside a list row escape the row — a row with an `overflow`, a `position` or a `z-index` of its own
 would otherwise clip the panel or stack something over it.
 
-**It is not a native `<dialog>`.** `slate:dom` has no `showModal`, so there is nothing to open one
+**It is not a native `<dialog>`.** `dom` has no `showModal`, so there is nothing to open one
 with; what is here is a backdrop and a panel carrying `role="dialog"` and `aria-modal="true"`, which
 is what a browser gives a native dialog anyway.
 

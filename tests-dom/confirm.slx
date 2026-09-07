@@ -1,7 +1,7 @@
 import { createElement, Fragment, mount, useState } from lath
 import { domHost } from lath/dom
 import { Confirm } from "../mortar.slx"
-import { activeElement, attribute, byId, query, removeChild } from slate:dom
+import { activeElement, attribute, byId, query, removeChild } from dom
 
 import { at, click, fire, focus, inHead, shown } from "./probe.slx"
 
@@ -12,8 +12,9 @@ import { at, click, fire, focus, inHead, shown } from "./probe.slx"
 // inside it does not do: none of them is a shape in some markup, and all of them are what makes a
 // modal a modal rather than a box with two buttons in it.
 //
-// **A node handle is a fresh integer every query**, so nothing here compares handles. The two
-// buttons carry a `data-m-confirm`, the trigger carries an `id`, and both are asked of the page.
+// **A node is the element itself now, not an integer handle**, so two reads of one element are
+// `==` -- but this file still asks the page rather than comparing nodes. The two buttons carry a
+// `data-m-confirm`, the trigger carries an `id`, and both are asked of the page.
 
 // What the caret is in, by the name the page knows it under -- the button's own word inside the
 // dialog, the element's id outside it, and empty for nowhere at all.
@@ -81,7 +82,7 @@ async A_CLOSED_DIALOG_IS_NOT_ON_THE_PAGE_AT_ALL()
 
 @test
 async THE_PANEL_SAYS_WHAT_IT_IS_AND_NAMES_ITS_OWN_QUESTION()
-    // **The aria wiring is only answerable here.** `slate:dom` has no `showModal`, so this is a
+    // **The aria wiring is only answerable here.** `dom` has no `showModal`, so this is a
     // backdrop and a panel doing by hand what a browser gives a native dialog.
     at("")
 

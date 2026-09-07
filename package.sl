@@ -1,6 +1,6 @@
 {
     name: "mortar",
-    version: "0.5.0",
+    version: "0.6.0",
 
     // **One module, and that is the whole of the public surface.** `mortar.slx` declares every
     // component the library has; the files under `parts/` are where the bodies and the stylesheets
@@ -22,6 +22,7 @@
         // are 0.6.0's. `style(css)` is what puts a component's stylesheet on the page, and every
         // component here writes both text and empty text children, which 0.5.1 was already the
         // floor for.
-        lath: { git: "github.com/slate-language/lath", version: "0.7.0" },
+        lath: { git: "github.com/slate-language/lath", version: "0.8.0" },
+        dom: { git: "github.com/slate-language/dom", version: "0.1.1" },
     },
 }

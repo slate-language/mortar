@@ -1,6 +1,6 @@
 import { createElement, Fragment, mount, hydrate, html, flush, createStore, Provider } from lath
 import { domHost } from lath/dom
-import { setCookie, cookie } from slate:dom
+import { setCookie, cookie } from dom
 import { Button, Theme, useTheme } from "../mortar.slx"
 
 import { at, click, mutations, shown } from "./probe.slx"

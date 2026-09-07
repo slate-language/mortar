@@ -223,7 +223,7 @@ word renders light rather than faulting, the same as an unrecognised address par
 renders `<Theme theme={x}>` on every render is not fought by its own toggle: `useTheme()`'s setter,
 called from anywhere in the tree, is the atom's own value from then on.
 
-**`Theme` writes the cookie back itself, when the reader changes it.** `slate:dom` got `setCookie` in
+**`Theme` writes the cookie back itself, when the reader changes it.** `dom` got `setCookie` in
 0.0.34, and `Theme` calls it directly — `theme=dark; path=/; max-age=31536000; samesite=lax` — under
 the same condition as `onChange` below: never for the seed, never on mount, only for a later
 `useTheme()` toggle. No route is needed any more for the ordinary case; the very next request already
@@ -264,7 +264,7 @@ val [asking, setAsking] = useState(false)
 
 **It goes through a portal into the document's `<body>`**, which is what lets a `Confirm` written
 inside a list row escape the row — a row with an `overflow`, a `position` or a `z-index` of its own
-would otherwise clip the panel or stack something over it. It is not a native `<dialog>`: `slate:dom`
+would otherwise clip the panel or stack something over it. It is not a native `<dialog>`: `dom`
 has no `showModal`, so what is here is a backdrop and a panel carrying `role="dialog"` and
 `aria-modal="true"`, which is what a browser gives a native dialog anyway.
 
@@ -289,7 +289,7 @@ That is not free. `{n} replies` is a run of text children a parser reads back as
 lath 0.5.1 settled them in the tree. Every component here is written the ordinary way and the suite
 is what says so.
 
-**Two components import a host, and every other one imports none.** `Theme` reaches `slate:dom` for
+**Two components import a host, and every other one imports none.** `Theme` reaches `dom` for
 the cookie it persists a colour with, and `Confirm` reaches it for the body it portals into and the
 caret it moves; both ask `host()` first, so the call is simply not made where there is no browser to
 make it in. Everything else in the library is host-free and renders under the interpreter, beside
@@ -313,13 +313,12 @@ so it cannot change by accident.
 
 ## Requirements
 
-slate **0.0.37** or newer, and lath **0.7.0** or newer. The slate floor is `focus`, `blur` and
-`activeElement` on `slate:dom` — `Confirm` cannot move a caret, give one back, or trap Tab without
-all three, and there is no way to write a modal that does not. Before those it was 0.0.35, for
-`setCookie`/`cookie`, which is what `Theme` persists itself with, and the removal of `len(x)` in
-favor of `.length`. The lath floor is not a preference: the theme lives in an atom, and `atom`, `useAtom`,
-`createStore` and `Provider` are 0.6.0's. `style(css)` is where a component's stylesheet comes from,
-and every component here also relies on 0.5.1's fix for a
+slate **0.0.40** or newer, lath **0.8.0** or newer, and the `dom` package, **0.1.1** or newer.
+`dom` replaces the compiler's built-in `slate:dom` with the same forty-four names over `external`;
+0.0.40 is its own floor, and `focus`, `blur` and `activeElement` are still what `Confirm` needs to
+move a caret, give one back, and trap Tab. The lath floor is not a preference: the theme lives in an
+atom, and `atom`, `useAtom`, `createStore` and `Provider` are 0.6.0's. `style(css)` is where a
+component's stylesheet comes from, and every component here also relies on 0.5.1's fix for a
 run of text children and an empty text child hydrating against markup a browser parsed.
 
 ## Licence
