@@ -1,0 +1,318 @@
+// A button that opens a list of things to do.
+//
+// **IT IS THE WAI-ARIA MENU BUTTON PATTERN AND NOT A `<select>`.** A menu is a list of ACTIONS --
+// delete this, rename it, export it -- and every one of them happens the moment it is chosen.
+// `Segmented`, `Tabs` and a form's `Field` are the controls for a CHOICE, which is a value that
+// stays chosen and can be changed back; nothing here holds a value and nothing here is a filter, a
+// sort order or a page number. Where the answer has an address, it is an anchor and not this.
+//
+// **THE LIST IS RENDERED AND HIDDEN RATHER THAN ABSENT.** A server sends the button and the whole
+// list carrying `hidden`, so a page whose script never ran still says what the actions are and a
+// hydrating page has nothing to correct. That is the difference between this and `Confirm`, which
+// renders nothing at all without a document: a modal exists to interrupt and only a running page can
+// interrupt, where a menu's contents are ordinary markup and only its OPENING needs a browser.
+//
+// **THE CARET NEVER STOPS ON AN ITEM ON THE WAY THROUGH THE PAGE.** Every `menuitem` is
+// `tabindex="-1"` and the button is the one stop, which is what makes a menu of nine actions one Tab
+// press rather than ten. Opening moves the caret into the list -- to the first item, or to the last
+// where ArrowUp did the opening -- and the arrows move inside it and wrap; Home and End reach the
+// ends; Escape closes and gives the caret back to the button; Tab closes and leaves the caret to
+// carry on out of the component the way it was going.
+//
+// **A DISABLED ITEM IS SKIPPED RATHER THAN LANDED ON AND REFUSED.** It carries `aria-disabled`
+// rather than `disabled`, so a reader is still told it is there and what it is called -- an action
+// that vanishes when it cannot be taken is an action nobody can find out about -- but no arrow key
+// stops on it and no press chooses it.
+//
+// The shape it is being built to:
+//
+//     <Menu label="Actions" items={[{ id: "rename", label: "Rename", onChoose: rename },
+//                                   { id: "export", label: "Export", onChoose: save, disabled: true },
+//                                   { id: "delete", label: "Delete", onChoose: remove, danger: true }]}/>
+//
+// **A click anywhere else closes it, and the way that is done is the one thing worth reading twice.**
+// While the menu is open a listener sits on the document's `<body>` and closes it; the component's
+// own root stops a click before it gets there, so what reaches the listener is by construction a
+// click somewhere else. `dom`'s event record carries no `target` -- the eight fields are the type,
+// the value, the checked flag, the key, the modifiers, the button, `stop` and `prevent` -- so asking
+// *"was that click inside me"* of the event is not something a slate program can do, and stopping
+// the ones that were inside is how the question is answered instead. The root only stops the click
+// while the menu is OPEN, which is what lets a second `Menu`'s button close the first one.
+
+import { createElement, Fragment, useState, useRef, useEffect, style } from lath
+import { byId, focus, off, on, query } from dom
+
+import tokens from "./tokens.css"
+import buttons from "./button.css"
+import sheet from "./menu.css"
+
+import { choice as oneOf, classes, list, said, text } from "./props.sl"
+
+// Which edge of the button the list hangs from.
+export val Aligns = ["start", "end"]
+
+// The items, read once: each is a record carrying an `id` and a `label`, optionally an `onChoose`,
+// a `disabled` and a `danger`, and no two of them name the same id.
+//
+// **The duplicate is worth its own sentence.** Two items with one id write two elements with one
+// `id` attribute, and the caret the arrows move by id then lands on whichever the browser found
+// first -- which looks like a menu that sometimes skips a row rather than like the mistake it is.
+idsOf(all: array) -> array =
+    val seen = []
+    var at = 0
+
+    for one in all
+        if !(one is object)
+            throw "Menu's `items`, item " + string(at) + ", is a record, and is " + said(one)
+
+        val who = one.id ?? null
+        val what = one.label ?? null
+        val does = one.onChoose ?? null
+        val stopped = one.disabled ?? false
+        val severe = one.danger ?? false
+
+        if !(who is string)
+            throw "Menu's `items`, item " + string(at) + ", has an `id` that is text, and is " + said(who)
+
+        if !(what is string)
+            throw "Menu's `items`, item " + string(at) + ", has a `label` that is text, and is " + said(what)
+
+        if does != null && !(does is function)
+            throw "Menu's `items`, item " + string(at) + ", has an `onChoose` that is a function, and is " + said(does)
+
+        if !(stopped is boolean)
+            throw "Menu's `items`, item " + string(at) + ", has a `disabled` that is true or false, and is " + said(stopped)
+
+        if !(severe is boolean)
+            throw "Menu's `items`, item " + string(at) + ", has a `danger` that is true or false, and is " + said(severe)
+
+        if seen.indexOf(who) != null
+            throw "Menu's `items` names \"" + who + "\" twice, and an item is identified by its `id`"
+
+        seen.push(who)
+
+        at = at + 1
+
+    seen
+
+// A button that opens a list of things to do.
+export menu({ items = [], label = null, align = "start", id = "m-menu", class: extra = "" }) =
+    style(tokens)
+    style(buttons)
+    style(sheet)
+
+    val rows = list("Menu", "items", items)
+
+    // **A menu with nothing in it is refused rather than rendered empty.** A button that opens an
+    // empty box is a component that was handed the wrong list, and a page that quietly offers
+    // nothing is how that gets found in a browser instead of here.
+    if rows.length == 0
+        throw "Menu's `items` is at least one item, and is empty"
+
+    // **Read for the refusals and not for the list**, which is what the arrows walk and is built
+    // just below out of the items an arrow may actually land on.
+    idsOf(rows)
+
+    val name = text("Menu", "label", label)
+    val edge = oneOf("Menu", "align", align, Aligns)
+    val own = text("Menu", "id", id)
+
+    // The items an arrow key may land on, which is every one that is not disabled.
+    val live = []
+
+    for row in rows
+        if (row.disabled ?? false) != true then live.push(row.id)
+
+    val [open, setOpen] = useState(false)
+
+    // Which item the caret is wanted on once the list is on the page, and whether the button is
+    // owed the caret back. **Both are refs and not state**: they decide what an effect does after a
+    // render rather than what the render says, and putting either in state would ask for a second
+    // pass that draws exactly what the first one did.
+    val want = useRef(null)
+    val owed = useRef(false)
+
+    first() = if live.length == 0 then null else live[0]
+    last() = if live.length == 0 then null else live[live.length - 1]
+
+    itemId(who: string) -> string = own + "-item-" + who
+
+    // **The caret is moved by id and not by holding a node**, the list being rebuilt around whatever
+    // `hidden` currently says -- and `host()` is asked first, exactly as `Tabs` and `Confirm` do,
+    // because there is no caret to move where there is no document.
+    put(who) =
+        if host() != "browser" then return null
+        if who == null then return null
+
+        val node = byId(itemId(who))
+
+        if node != null then focus(node)
+
+        null
+
+    // **Opening cannot focus an item during the render that opens it**, the list still carrying
+    // `hidden` at that moment and a hidden element being nothing a browser will focus. So the caret
+    // moves here, after the commit, which is the whole reason this component has an effect at all.
+    land() =
+        if host() != "browser" then return null
+
+        if open
+            put(want.current ?? first())
+        elif owed.current
+            owed.current = false
+
+            val node = byId(own + "-button")
+
+            if node != null then focus(node)
+
+        null
+
+    useEffect(land, [open])
+
+    // A click anywhere else closes the menu. See the note at the top of this file: the root stops
+    // the clicks that were inside, so what arrives here is by construction one that was not.
+    watch() =
+        if !open then return null
+        if host() != "browser" then return null
+
+        val body = query("body")
+
+        if body == null then return null
+
+        away(e) =
+            owed.current = false
+
+            setOpen(false)
+
+            null
+
+        on(body, "click", away)
+
+        () -> off(body, "click", away)
+
+    useEffect(watch, [open])
+
+    show(who) =
+        want.current = who
+
+        setOpen(true)
+
+        null
+
+    // Closing, and whether the button is owed the caret. **Escape and a choice give it back and Tab
+    // and a click elsewhere do not**, which is the pattern's own division: the first two end inside
+    // the menu and the last two are the reader already on their way somewhere else.
+    hide(give: boolean) =
+        owed.current = give
+
+        setOpen(false)
+
+        null
+
+    pick(row) =
+        owed.current = true
+
+        setOpen(false)
+
+        val does = row.onChoose ?? null
+
+        if does != null then does(row.id)
+
+        null
+
+    pressed(e) =
+        if open then hide(true) else show(first())
+
+        null
+
+    // **Enter and space have their default prevented** rather than being left to the browser: a
+    // button activated by either raises a click of its own, and a menu that opened on the key press
+    // and closed again on the click it turned into is a menu that never opens.
+    asked(e) =
+        if e.key == "ArrowDown"
+            e.prevent()
+
+            if open then put(first()) else show(first())
+        elif e.key == "ArrowUp"
+            e.prevent()
+
+            if open then put(last()) else show(last())
+        elif e.key == "Enter" || e.key == " "
+            e.prevent()
+
+            if open then hide(true) else show(first())
+        elif e.key == "Escape"
+            if open
+                e.prevent()
+                hide(true)
+
+        null
+
+    one(row) =
+        val who = row.id
+        val stopped = (row.disabled ?? false) == true
+        val severe = (row.danger ?? false) == true
+        val at = live.indexOf(who)
+
+        chosen(e) =
+            if stopped then return null
+
+            pick(row)
+
+            null
+
+        // **Tab is the one key here that is left to the browser.** The menu closes and the caret
+        // carries on out of the component to whatever was next in the page's own order, which is
+        // what a reader pressing Tab asked for; every other key belongs to the list.
+        keyed(e) =
+            if e.key == "ArrowDown"
+                e.prevent()
+                put(if at == null then first() else live[if at + 1 >= live.length then 0 else at + 1])
+            elif e.key == "ArrowUp"
+                e.prevent()
+                put(if at == null then last() else live[if at == 0 then live.length - 1 else at - 1])
+            elif e.key == "Home"
+                e.prevent()
+                put(first())
+            elif e.key == "End"
+                e.prevent()
+                put(last())
+            elif e.key == "Escape"
+                e.prevent()
+                hide(true)
+            elif e.key == "Enter" || e.key == " "
+                e.prevent()
+
+                if !stopped then pick(row)
+            elif e.key == "Tab"
+                hide(false)
+
+            null
+
+        val out = <li key={who} role="none" class="m-menu-row">
+            <button type="button" role="menuitem" id={itemId(who)} tabindex="-1"
+                    class={if severe then "m-menu-item danger" else "m-menu-item"}
+                    aria-disabled={if stopped then "true" else null}
+                    onClick={chosen} onKeyDown={keyed}>{row.label}</button>
+        </li>
+
+        out
+
+    // **The root stops a click only while the menu is open**, which is what the body listener reads
+    // as *"that one was mine"* -- and what lets a second menu's button, whose own root is not
+    // stopping anything, close this one on the way past.
+    guard(e) =
+        if open then e.stop()
+
+        null
+
+    val out = <div class={classes("Menu", "m-menu", extra)} onClick={guard}>
+        <button type="button" class="m-button quiet m-menu-button" id={own + "-button"}
+                aria-haspopup="menu" aria-controls={own + "-list"}
+                aria-expanded={if open then "true" else "false"}
+                onClick={pressed} onKeyDown={asked}>{name}</button>
+        <ul class={"m-menu-list " + edge} role="menu" id={own + "-list"}
+            aria-labelledby={own + "-button"} hidden={!open}>{rows.map(one)}</ul>
+    </div>
+
+    out

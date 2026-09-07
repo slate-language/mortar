@@ -43,6 +43,7 @@
 // | `FileInput` | `name`, `label`, `accept`, `maxSize`, `error`, `hint`, `required`, `id`, `onInput` |
 // | `Button` | `kind`, `variant`, `disabled`, `onClick`, `label`, `children` |
 // | `Actions` | `children` |
+// | `Menu` | `items`, `label`, `align`, `id` |
 // | `Confirm` | `open`, `title`, `detail`, `confirmLabel`, `cancelLabel`, `tone`, `onConfirm`, `onCancel`, `id` |
 // | `VisuallyHidden` | `tag`, `children` |
 //
@@ -68,6 +69,7 @@ import { field, textArea, fileInput } from "./parts/field.slx"
 import { button, actions, Kinds as buttonKinds, Variants as buttonVariants } from "./parts/button.slx"
 import { hidden } from "./parts/hidden.slx"
 import { confirm } from "./parts/confirm.slx"
+import { menu } from "./parts/menu.slx"
 
 // -- the theme -------------------------------------------------------------------------------------
 
@@ -123,6 +125,15 @@ export val TextArea = textArea
 export val FileInput = fileInput
 export val Button = button
 export val Actions = actions
+
+// -- a list of things to do --------------------------------------------------------------------------
+//
+// **`Menu` is the control for an ACTION and every other list-shaped control here is for a value.** A
+// filter, a sort order and a page number are all things that stay chosen and can be changed back, so
+// each of them is an anchor a page with no script still works; a menu's rows happen the moment they
+// are pressed. It is the library's second keyboard-navigated control, after `Tabs`.
+
+export val Menu = menu
 
 // -- asking before something irreversible ------------------------------------------------------------
 //

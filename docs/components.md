@@ -421,6 +421,53 @@ deliberate**: a `<button>` inside a form with no `type` submits it.
 
 ---
 
+## Menu
+
+| prop | default | what it is |
+|---|---|---|
+| `items` | `[]` | records carrying an `id`, a `label` and optionally an `onChoose`, a `disabled` and a `danger`, and there has to be at least one |
+| `label` | *required* | what the button says |
+| `align` | `"start"` | which edge of the button the list hangs from — `"start"` or `"end"` |
+| `id` | `"m-menu"` | what the button, the list and every item are identified by |
+
+**It is the control for an ACTION, which is what separates it from every other list-shaped control
+here.** A filter, a sort order and a page number are values that stay chosen and can be changed back,
+so `TagList`, `SortControls`, `Segmented` and `Pagination` are all anchors that work on a page whose
+script never ran. A menu's rows happen the moment they are pressed, and `onChoose` is called with the
+item's `id`.
+
+**The whole list is rendered and carries `hidden`**, so a server sends what the actions are and a
+hydrating page has nothing to correct. Only the *opening* needs a browser, which is what separates it
+from `Confirm` — a modal renders nothing at all without a document.
+
+**A disabled item carries `aria-disabled` rather than `disabled`**, so it is still announced and still
+says what it is called; no arrow key stops on it and no press chooses it. A `danger` item wears the
+library's one colour for *this cannot be taken back*.
+
+The keyboard, which is the WAI-ARIA menu button pattern:
+
+- **the button** — **ArrowDown**, **Enter** and **Space** open the menu on the first item and
+  **ArrowUp** opens it on the last;
+- **inside the list** — **ArrowDown** and **ArrowUp** move and **wrap**, skipping disabled items;
+  **Home** and **End** go to the first and the last;
+- **Enter** and **Space** choose, which calls `onChoose(id)`, closes the menu and gives the caret back
+  to the button; **Escape** closes and gives the caret back without choosing;
+- **Tab** closes and is otherwise left to the browser, so the caret carries on out of the component
+  the way it was going;
+- every item is `tabindex="-1"` and the button is the one stop, so a menu of nine actions is one Tab
+  press rather than ten.
+
+**A click anywhere else closes it.** While the menu is open a listener sits on the document's `<body>`;
+the component's own root stops a click before it reaches that listener, so what arrives there is by
+construction a click somewhere else. The root stops clicks only while the menu is open, which is what
+lets a second `Menu`'s button close the first one on the way past.
+
+Refused: an `items` that is not a list, an empty one, an item that is not a record or carries no text
+`id` or `label`, an item whose `onChoose` is not a function or whose `disabled` or `danger` is not a
+boolean, two items naming the same `id`, a missing `label`, and an `align` that is neither word.
+
+---
+
 ## Confirm
 
 | prop | default | what it is |

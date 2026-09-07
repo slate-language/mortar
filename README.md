@@ -99,6 +99,7 @@ Toast's `messages`, item 1, has no `id`
 | `FileInput` | `name`, `label`, `accept`, `maxSize`, `error`, `hint`, `required`, `id`, `onInput` |
 | `Button` | `kind`, `variant`, `disabled`, `onClick`, `label`, `children` |
 | `Actions` | `children` |
+| `Menu` | `items`, `label`, `align`, `id` |
 | `Confirm` | `open`, `title`, `detail`, `confirmLabel`, `cancelLabel`, `tone`, `onConfirm`, `onCancel`, `id` |
 
 Plus ten exported lists of the words a prop may be — `Themes`, `Sizes`, `Shows`, `CardLevels`,
@@ -279,6 +280,43 @@ jsdom:
 - every panel is rendered and the unselected ones carry `hidden`, so a trip to another tab and back
   keeps whatever a panel had in it.
 
+## A list of things to do
+
+**`Menu` is the control for an ACTION, and every other list-shaped control here is for a value.** A
+filter, a sort order and a page number stay chosen and can be changed back, which is why `TagList`,
+`SortControls`, `Segmented` and `Pagination` are all anchors that work on a page whose script never
+ran. A menu's rows happen the moment they are pressed.
+
+```slate
+<Menu label="Actions" items={[{ id: "rename", label: "Rename", onChoose: rename },
+                              { id: "export", label: "Export", onChoose: save, disabled: true },
+                              { id: "delete", label: "Delete", onChoose: remove, danger: true }]}/>
+```
+
+**The whole list is rendered and carries `hidden`**, so a server still says what the actions are and a
+hydrating page has nothing to correct — only the *opening* needs a browser, which is what separates it
+from `Confirm`. A `disabled` item carries `aria-disabled` rather than `disabled`, so it is still
+announced and still named; nothing lands on it and nothing chooses it.
+
+It is the WAI-ARIA menu button pattern, and `tests-dom/menu.slx` measures every part of it:
+
+- **ArrowDown**, **Enter** and **Space** open the menu on the first item and **ArrowUp** opens it on
+  the last;
+- inside the list the arrows move and **wrap**, stepping over disabled rows, and **Home** and **End**
+  reach the ends;
+- **Enter** and **Space** choose — `onChoose(id)`, then the menu closes and the button gets the caret
+  back; **Escape** closes and gives it back without choosing;
+- **Tab** closes and is left to the browser, so the caret carries on out of the component;
+- every item is `tabindex="-1"` and the button is the one stop, so a menu of nine actions is one Tab
+  press rather than ten.
+
+**A click anywhere else closes it**, and the way that is done is worth reading twice: a listener sits
+on the document's `<body>` while the menu is open, and the component's own root stops a click before
+it gets there — so what reaches the listener is by construction a click somewhere else. `dom`'s event
+record carries no target, so asking *"was that click inside me"* of the event is not something a slate
+program can do. The root stops clicks only while its own menu is open, which is what lets a second
+`Menu`'s button close the first one on the way past.
+
 ## Confirming a destructive action
 
 **`Confirm` is the one component here that renders nothing on a server** — open or closed, not even
@@ -323,9 +361,10 @@ That is not free. `{n} replies` is a run of text children a parser reads back as
 lath 0.5.1 settled them in the tree. Every component here is written the ordinary way and the suite
 is what says so.
 
-**Three components import a host, and every other one imports none.** `Theme` reaches `dom` for
+**Four components import a host, and every other one imports none.** `Theme` reaches `dom` for
 the cookie it persists a colour with, `Confirm` reaches it for the body it portals into and the caret
-it moves, and `Tabs` reaches it for the tab an arrow key puts the caret in; each asks `host()` first,
+it moves, `Tabs` reaches it for the tab an arrow key puts the caret in, and `Menu` reaches it for the
+item an opening puts the caret on and the body listener that closes it; each asks `host()` first,
 so the call is simply not made where there is no browser to make it in. Everything else in the library is host-free and renders under the interpreter, beside
 `slate:http` on a server, and in a browser, from the same source.
 

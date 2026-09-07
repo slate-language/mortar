@@ -1,0 +1,449 @@
+import { createElement, Fragment, mount } from lath
+import { domHost } from lath/dom
+import { Menu } from "../mortar.slx"
+import { activeElement, attribute, byId } from dom
+
+import { at, beside, click, fire, inHead } from "./probe.slx"
+
+// The menu against a real document, which is the only host that can open it.
+//
+// **EVERY CLAIM THIS FILE MAKES IS ONE A STRING CANNOT ANSWER.** Whether the list opens, which item
+// the caret lands on, what the arrows reach and what they step over, where Escape puts the caret
+// back, and whether a click somewhere else on the page closes it: none of them is a shape in some
+// markup, and between them they are the whole of what makes a button and a hidden list a menu.
+//
+// **Opening is a pair and almost every assertion here checks both halves** -- the list unhidden and
+// the caret inside it -- because a pattern that did one without the other would pass half of these.
+
+countOf(s: string, sub: string) -> integer =
+    var found = 0
+    var from = 0
+
+    while true
+        val found_at = indexOf(s[from..], sub)
+
+        if found_at == null then break
+
+        found = found + 1
+        from = from + found_at + sub.length
+
+    found
+
+// **The middle one is disabled**, which is what makes every arrow assertion below say something: a
+// list of three where the arrows only ever reach two.
+val Three = [{ id: "rename", label: "Rename" },
+             { id: "export", label: "Export", disabled: true },
+             { id: "delete", label: "Delete", danger: true }]
+
+// The id of the element the caret is in, or empty where it is nowhere at all.
+caret() -> string =
+    val on = activeElement()
+
+    if on == null then return ""
+
+    attribute(on, "id") ?? ""
+
+// Whether the list is open, asked of both things that say so.
+open(own: string) -> boolean =
+    val shut = attribute(byId(own + "-list"), "hidden") != null
+    val said = attribute(byId(own + "-button"), "aria-expanded")
+
+    !shut && said == "true"
+
+// -- opening ------------------------------------------------------------------------------------------
+
+@test
+async A_MENU_ARRIVES_CLOSED()
+    at("")
+
+    mount(<Menu label="Actions" items={Three}/>, domHost("#page"))
+
+    await sleep(1)
+
+    assertEq(open("m-menu"), false)
+    assertEq(caret(), "")
+
+@test
+async THE_SHEET_ARRIVES_WITH_THE_MENU_AND_ONLY_ONCE()
+    // **The head is shared by the whole of this suite**, so what is asserted is that the count is 1
+    // rather than that it went from nothing to one.
+    at("")
+
+    mount(<Menu label="Actions" items={Three}/>, domHost("#page"))
+
+    await sleep(1)
+
+    assertEq(countOf(inHead(), ".m-menu {"), 1)
+
+@test
+async PRESSING_THE_BUTTON_OPENS_THE_LIST_AND_PUTS_THE_CARET_ON_THE_FIRST_ITEM()
+    // **The caret cannot move during the render that opens the list**, the list still carrying
+    // `hidden` at that moment -- which is the whole reason this component has an effect.
+    at("")
+
+    mount(<Menu label="Actions" items={Three}/>, domHost("#page"))
+
+    await sleep(1)
+
+    click("#m-menu-button")
+
+    await sleep(1)
+
+    assertEq(open("m-menu"), true)
+    assertEq(caret(), "m-menu-item-rename")
+
+@test
+async ARROW_UP_OPENS_THE_LIST_ON_THE_LAST_ITEM()
+    // **The one thing that makes ArrowUp worth having on a closed menu**: the last action is one key
+    // press away rather than the length of the list.
+    at("")
+
+    mount(<Menu label="Actions" items={Three}/>, domHost("#page"))
+
+    await sleep(1)
+
+    fire(byId("m-menu-button"), "keydown key=ArrowUp")
+
+    await sleep(1)
+
+    assertEq(open("m-menu"), true)
+    assertEq(caret(), "m-menu-item-delete")
+
+@test
+async ARROW_DOWN_AND_ENTER_AND_SPACE_ALL_OPEN_ON_THE_FIRST()
+    at("")
+
+    mount(<Menu label="Actions" items={Three}/>, domHost("#page"))
+
+    await sleep(1)
+
+    fire(byId("m-menu-button"), "keydown key=ArrowDown")
+
+    await sleep(1)
+
+    assertEq(caret(), "m-menu-item-rename")
+
+    fire(byId("m-menu-item-rename"), "keydown key=Escape")
+
+    await sleep(1)
+
+    assertEq(open("m-menu"), false)
+
+    fire(byId("m-menu-button"), "keydown key=Enter")
+
+    await sleep(1)
+
+    assertEq(open("m-menu"), true)
+    assertEq(caret(), "m-menu-item-rename")
+
+@test
+async PRESSING_THE_BUTTON_AGAIN_CLOSES_IT()
+    at("")
+
+    mount(<Menu label="Actions" items={Three}/>, domHost("#page"))
+
+    await sleep(1)
+
+    click("#m-menu-button")
+
+    await sleep(1)
+
+    click("#m-menu-button")
+
+    await sleep(1)
+
+    assertEq(open("m-menu"), false)
+    assertEq(caret(), "m-menu-button")
+
+// -- moving inside it ---------------------------------------------------------------------------------
+
+@test
+async THE_ARROWS_MOVE_AND_WRAP_AND_STEP_OVER_THE_DISABLED_ROW()
+    // **A disabled item is skipped rather than landed on and refused**, so the ring the arrows walk
+    // is the two rows that can actually be chosen.
+    at("")
+
+    mount(<Menu label="Actions" items={Three}/>, domHost("#page"))
+
+    await sleep(1)
+
+    click("#m-menu-button")
+
+    await sleep(1)
+
+    fire(byId("m-menu-item-rename"), "keydown key=ArrowDown")
+
+    await sleep(1)
+
+    assertEq(caret(), "m-menu-item-delete")
+
+    fire(byId("m-menu-item-delete"), "keydown key=ArrowDown")
+
+    await sleep(1)
+
+    assertEq(caret(), "m-menu-item-rename")
+
+    fire(byId("m-menu-item-rename"), "keydown key=ArrowUp")
+
+    await sleep(1)
+
+    assertEq(caret(), "m-menu-item-delete")
+
+@test
+async HOME_AND_END_GO_TO_THE_ENDS()
+    at("")
+
+    mount(<Menu label="Actions" items={Three}/>, domHost("#page"))
+
+    await sleep(1)
+
+    click("#m-menu-button")
+
+    await sleep(1)
+
+    fire(byId("m-menu-item-rename"), "keydown key=End")
+
+    await sleep(1)
+
+    assertEq(caret(), "m-menu-item-delete")
+
+    fire(byId("m-menu-item-delete"), "keydown key=Home")
+
+    await sleep(1)
+
+    assertEq(caret(), "m-menu-item-rename")
+
+// -- leaving it ----------------------------------------------------------------------------------------
+
+@test
+async ESCAPE_CLOSES_IT_AND_GIVES_THE_CARET_BACK_TO_THE_BUTTON()
+    // **The caret has to come back somewhere it can be found.** A menu that closes and leaves the
+    // caret on a hidden row is a page a keyboard reader has been dropped out of.
+    at("")
+
+    mount(<Menu label="Actions" items={Three}/>, domHost("#page"))
+
+    await sleep(1)
+
+    click("#m-menu-button")
+
+    await sleep(1)
+
+    fire(byId("m-menu-item-rename"), "keydown key=Escape")
+
+    await sleep(1)
+
+    assertEq(open("m-menu"), false)
+    assertEq(caret(), "m-menu-button")
+
+@test
+async TAB_CLOSES_IT_AND_LEAVES_THE_CARET_TO_CARRY_ON()
+    // **The one key here that is left to the browser.** A reader pressing Tab asked to go on through
+    // the page, so the menu shuts and does not haul the caret back to its own button.
+    at("")
+
+    mount(<Menu label="Actions" items={Three}/>, domHost("#page"))
+
+    await sleep(1)
+
+    click("#m-menu-button")
+
+    await sleep(1)
+
+    fire(byId("m-menu-item-rename"), "keydown key=Tab")
+
+    await sleep(1)
+
+    assertEq(open("m-menu"), false)
+    assert(caret() != "m-menu-button")
+
+@test
+async A_CLICK_SOMEWHERE_ELSE_ON_THE_PAGE_CLOSES_IT()
+    // **The listener is on the body and the component's own root stops the clicks that were inside
+    // it**, so what reaches the listener is by construction a click somewhere else. `dom`'s event
+    // record carries no target, and this is the arrangement that answers the question without one.
+    beside("<button id=\"other\" type=\"button\">Other</button>")
+
+    mount(<Menu label="Actions" items={Three}/>, domHost("#page"))
+
+    await sleep(1)
+
+    click("#m-menu-button")
+
+    await sleep(1)
+
+    assertEq(open("m-menu"), true)
+
+    click("#other")
+
+    await sleep(1)
+
+    assertEq(open("m-menu"), false)
+
+@test
+async A_CLICK_INSIDE_THE_OPEN_LIST_LEAVES_IT_OPEN()
+    // The other half of the same arrangement: a click the root stopped never reaches the listener.
+    beside("<button id=\"other\" type=\"button\">Other</button>")
+
+    mount(<Menu label="Actions" items={Three}/>, domHost("#page"))
+
+    await sleep(1)
+
+    click("#m-menu-button")
+
+    await sleep(1)
+
+    click("#m-menu-item-export")
+
+    await sleep(1)
+
+    assertEq(open("m-menu"), true)
+
+@test
+async A_SECOND_MENUS_BUTTON_CLOSES_THE_FIRST_ONE_ON_THE_WAY_PAST()
+    // **The root stops a click only while its own menu is open**, which is what lets the click that
+    // opens the second one reach the body and close the first. Two menus open at once is not a state
+    // this library holds shared state to prevent -- it is what this rule makes ordinary.
+    at("")
+
+    mount(<Fragment><Menu label="One" items={Three} id="one"/>
+                    <Menu label="Two" items={Three} id="two"/></Fragment>, domHost("#page"))
+
+    await sleep(1)
+
+    click("#one-button")
+
+    await sleep(1)
+
+    assertEq(open("one"), true)
+
+    click("#two-button")
+
+    await sleep(1)
+
+    assertEq(open("one"), false)
+    assertEq(open("two"), true)
+
+// -- choosing -------------------------------------------------------------------------------------------
+
+@test
+async ENTER_CHOOSES_THE_ROW_THE_CARET_IS_ON_AND_CLOSES()
+    var said = ""
+
+    told(who) =
+        said = who
+
+        null
+
+    val items = [{ id: "rename", label: "Rename", onChoose: told },
+                 { id: "export", label: "Export", onChoose: told, disabled: true },
+                 { id: "delete", label: "Delete", onChoose: told, danger: true }]
+
+    at("")
+
+    mount(<Menu label="Actions" items={items}/>, domHost("#page"))
+
+    await sleep(1)
+
+    click("#m-menu-button")
+
+    await sleep(1)
+
+    fire(byId("m-menu-item-rename"), "keydown key=ArrowDown")
+
+    await sleep(1)
+
+    fire(byId("m-menu-item-delete"), "keydown key=Enter")
+
+    await sleep(1)
+
+    assertEq(said, "delete")
+    assertEq(open("m-menu"), false)
+    assertEq(caret(), "m-menu-button")
+
+@test
+async A_CLICK_ON_A_ROW_CHOOSES_IT_TOO()
+    var said = ""
+
+    told(who) =
+        said = who
+
+        null
+
+    val items = [{ id: "rename", label: "Rename", onChoose: told },
+                 { id: "delete", label: "Delete", onChoose: told, danger: true }]
+
+    at("")
+
+    mount(<Menu label="Actions" items={items}/>, domHost("#page"))
+
+    await sleep(1)
+
+    click("#m-menu-button")
+
+    await sleep(1)
+
+    click("#m-menu-item-delete")
+
+    await sleep(1)
+
+    assertEq(said, "delete")
+    assertEq(open("m-menu"), false)
+
+@test
+async A_DISABLED_ROW_IS_NOT_CHOSEN_BY_A_PRESS_OR_BY_A_CLICK()
+    // **It is announced and it is not choosable**, which is the whole of what `aria-disabled` buys
+    // over leaving the action off the list altogether.
+    var said = ""
+
+    told(who) =
+        said = who
+
+        null
+
+    val items = [{ id: "rename", label: "Rename", onChoose: told },
+                 { id: "export", label: "Export", onChoose: told, disabled: true }]
+
+    at("")
+
+    mount(<Menu label="Actions" items={items}/>, domHost("#page"))
+
+    await sleep(1)
+
+    click("#m-menu-button")
+
+    await sleep(1)
+
+    click("#m-menu-item-export")
+
+    await sleep(1)
+
+    assertEq(said, "")
+    assertEq(open("m-menu"), true)
+
+    fire(byId("m-menu-item-export"), "keydown key=Enter")
+
+    await sleep(1)
+
+    assertEq(said, "")
+    assertEq(open("m-menu"), true)
+
+@test
+async AN_ITEM_WITH_NO_ONCHOOSE_STILL_CLOSES_THE_MENU()
+    // A row that is only a label is not a fault, and pressing it is not one either.
+    at("")
+
+    mount(<Menu label="Actions" items={Three}/>, domHost("#page"))
+
+    await sleep(1)
+
+    click("#m-menu-button")
+
+    await sleep(1)
+
+    click("#m-menu-item-rename")
+
+    await sleep(1)
+
+    assertEq(open("m-menu"), false)
+    assertEq(caret(), "m-menu-button")

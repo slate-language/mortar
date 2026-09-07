@@ -1,6 +1,6 @@
 {
     name: "mortar",
-    version: "0.7.0",
+    version: "0.8.0",
 
     // **One module, and that is the whole of the public surface.** `mortar.slx` declares every
     // component the library has; the files under `parts/` are where the bodies and the stylesheets
@@ -8,11 +8,12 @@
     // imports has to be declared in the file it imports -- which is what the aliases in `mortar.slx`
     // are, and what makes that file the interface rather than a table in a README.
     //
-    // **Three files import a host and every other one imports none**: `parts/theme.slx`, for the
+    // **Four files import a host and every other one imports none**: `parts/theme.slx`, for the
     // cookie a colour is persisted in, `parts/confirm.slx`, for the body a dialog portals into and
-    // the caret it moves, and `parts/tabs.slx`, for the tab an arrow key puts the caret in. None of
-    // them calls one unguarded -- each asks `host()` first, so the call is not made where there is
-    // no browser to make it in. Every other component renders to markup on a
+    // the caret it moves, `parts/tabs.slx`, for the tab an arrow key puts the caret in, and
+    // `parts/menu.slx`, for the item an opening puts the caret on and the body listener that closes
+    // it again. None of them calls one unguarded -- each asks `host()` first, so the call is not
+    // made where there is no browser to make it in. Every other component renders to markup on a
     // server and into a document in a browser with no host import at all, and `Confirm` is the one
     // component in the library that renders NOTHING where there is no document, open or closed.
     main: "mortar.slx",

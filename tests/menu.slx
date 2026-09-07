@@ -1,0 +1,217 @@
+import { createElement, Fragment, mount, html } from lath
+import { Menu } from "../mortar.slx"
+
+import { countOf, fell, tree } from "./support.sl"
+
+// A button that opens a list of things to do, on the host that cannot open it.
+//
+// **WHAT A STRING CAN ANSWER IS THE SHAPE, AND THE SHAPE IS WHAT A SERVER SENDS.** The roles, the
+// wiring between the button and the list it controls, the `hidden` that says the list is shut, the
+// roving tabindex that keeps eight actions from being eight stops on the way through a page, and
+// which rows are disabled are all attributes in the markup -- so a page whose script never ran still
+// tells a reader what the actions are. What opening does, where the caret goes and what the arrows
+// reach is in `tests-dom/menu.slx`, because none of it is a shape.
+
+markup(el) -> string = tree(html(mount(el)))
+whole(el) -> string = html(mount(el))
+
+val Three = [{ id: "rename", label: "Rename" },
+             { id: "export", label: "Export", disabled: true },
+             { id: "delete", label: "Delete", danger: true }]
+
+// -- the shape --------------------------------------------------------------------------------------
+
+@test
+A_MENU_IS_A_BUTTON_AND_A_LIST_OF_MENUITEMS()
+    val out = markup(<Menu label="Actions" items={Three}/>)
+
+    assert(contains(out, "aria-haspopup=\"menu\""))
+    assert(contains(out, "role=\"menu\""))
+    assertEq(countOf(out, "role=\"menuitem\""), 3)
+    assertEq(countOf(out, "role=\"none\""), 3)
+    assertEq(countOf(out, "<a "), 0)
+    assert(contains(out, ">Actions<"))
+
+@test
+THE_LIST_IS_ITEMS_AND_NOTHING_ELSE_BECAUSE_A_UL_MAY_HOLD_NOTHING_ELSE()
+    // **Every `menuitem` is wrapped in an `<li role="none">`**, which is the only way a list of
+    // buttons is a `<ul>` at all.
+    val out = markup(<Menu label="Actions" items={Three}/>)
+
+    assertEq(countOf(out, "<li role=\"none\""), 3)
+    assertEq(countOf(out, "<ul "), 1)
+
+@test
+THE_BUTTON_NAMES_THE_LIST_AND_THE_LIST_NAMES_THE_BUTTON()
+    // **The wiring goes both ways**, which is what lets a reader be told what the button opens and,
+    // once inside it, what the list belongs to.
+    val out = markup(<Menu label="Actions" items={Three}/>)
+
+    assert(contains(out, "id=\"m-menu-button\""))
+    assert(contains(out, "aria-controls=\"m-menu-list\""))
+    assert(contains(out, "id=\"m-menu-list\""))
+    assert(contains(out, "aria-labelledby=\"m-menu-button\""))
+
+@test
+A_MENU_ARRIVES_CLOSED_AND_SAYS_SO_TWICE()
+    // **`hidden` and `aria-expanded` are one fact written for two readers**, and a server that sent
+    // only one of them would be a page that says it is shut and shows the list anyway.
+    val out = markup(<Menu label="Actions" items={Three}/>)
+
+    assert(contains(out, "aria-expanded=\"false\""))
+    assertEq(countOf(out, "hidden"), 1)
+
+@test
+THE_WHOLE_LIST_IS_SENT_EVEN_THOUGH_IT_IS_HIDDEN()
+    // **A menu's contents are ordinary markup and only its OPENING needs a browser**, which is the
+    // whole of what separates it from `Confirm` -- so a page with no script still says what the
+    // actions are rather than offering a button that does nothing and names nothing.
+    val out = markup(<Menu label="Actions" items={Three}/>)
+
+    assert(contains(out, ">Rename<"))
+    assert(contains(out, ">Export<"))
+    assert(contains(out, ">Delete<"))
+
+@test
+THE_CARET_NEVER_STOPS_ON_AN_ITEM_ON_THE_WAY_THROUGH_THE_PAGE()
+    // **A menu of nine actions is one Tab press and not ten**, which is the whole of the roving
+    // tabindex here: the button is the stop and the arrows are what move inside the list.
+    val out = markup(<Menu label="Actions" items={Three}/>)
+
+    assertEq(countOf(out, "tabindex=\"-1\""), 3)
+    assertEq(countOf(out, "tabindex=\"0\""), 0)
+
+@test
+AN_ID_OF_ITS_OWN_IDENTIFIES_THE_BUTTON_THE_LIST_AND_EVERY_ITEM()
+    // **Two menus on one page would otherwise write the same ids**, and an `aria-controls` pointing
+    // at a duplicate points at whichever the browser found first.
+    val out = markup(<Menu label="Actions" items={Three} id="row"/>)
+
+    assert(contains(out, "id=\"row-button\""))
+    assert(contains(out, "aria-controls=\"row-list\""))
+    assert(contains(out, "id=\"row-item-delete\""))
+    assertEq(countOf(out, "id=\"m-menu-button\""), 0)
+
+@test
+A_DISABLED_ITEM_IS_STILL_THERE_AND_SAYS_IT_CANNOT_BE_CHOSEN()
+    // **`aria-disabled` and not `disabled`**, so the action is announced and named. An action that
+    // vanishes when it cannot be taken is an action nobody can find out about.
+    val out = markup(<Menu label="Actions" items={Three}/>)
+
+    assertEq(countOf(out, "aria-disabled=\"true\""), 1)
+    assert(contains(out, "id=\"m-menu-item-export\""))
+
+@test
+THE_DESTRUCTIVE_ROW_IS_THE_ONLY_ONE_WEARING_THE_DANGER_TONE()
+    val out = markup(<Menu label="Actions" items={Three}/>)
+
+    assertEq(countOf(out, "class=\"m-menu-item danger\""), 1)
+    assertEq(countOf(out, "class=\"m-menu-item\""), 2)
+
+@test
+ALIGN_SAYS_WHICH_EDGE_OF_THE_BUTTON_THE_LIST_HANGS_FROM()
+    assert(contains(markup(<Menu label="Actions" items={Three}/>), "class=\"m-menu-list start\""))
+    assert(contains(markup(<Menu label="Actions" items={Three} align="end"/>), "class=\"m-menu-list end\""))
+
+@test
+THE_TRIGGER_IS_THE_LIBRARYS_OWN_BUTTON_AND_NOT_A_SECOND_ANSWER_TO_ONE_QUESTION()
+    val out = whole(<Menu label="Actions" items={Three}/>)
+
+    assert(contains(out, "class=\"m-button quiet m-menu-button\""))
+    assertEq(countOf(out, ".m-button {"), 1)
+
+@test
+A_CLASS_IS_APPENDED_TO_THE_COMPONENTS_OWN()
+    assert(contains(markup(<Menu label="Actions" items={Three} class="tight"/>), "class=\"m-menu tight\""))
+
+@test
+THE_SHEET_GOES_ON_THE_PAGE_ONCE_AND_SO_DO_THE_TOKENS()
+    // **`.m-menu-list`, `.m-menu-row` and `.m-menu-item` all contain `.m-menu`**, so what is counted
+    // is the rule's own opening brace -- the same proxy `tokens.css` is counted by and the one
+    // `Tabs` needs for the same reason.
+    val out = whole(<Menu label="Actions" items={Three}/>)
+
+    assertEq(countOf(out, ".m-menu {"), 1)
+    assertEq(countOf(out, ":root {"), 1)
+
+@test
+TWO_MENUS_ON_ONE_PAGE_STILL_CARRY_ONE_COPY_OF_THE_SHEET()
+    val out = whole(<Fragment><Menu label="One" items={Three} id="one"/>
+                              <Menu label="Two" items={Three} id="two"/></Fragment>)
+
+    assertEq(countOf(out, ".m-menu {"), 1)
+
+// -- the refusals ------------------------------------------------------------------------------------
+
+@test
+AN_ITEMS_THAT_IS_NOT_A_LIST_IS_REFUSED()
+    assert(contains(fell(() -> markup(<Menu label="Actions" items="rename"/>)), "Menu's `items`"))
+
+@test
+AN_EMPTY_MENU_IS_REFUSED_RATHER_THAN_RENDERED_EMPTY()
+    // A button that opens an empty box is a component that was handed the wrong list.
+    val said = fell(() -> markup(<Menu label="Actions" items={[]}/>))
+
+    assert(contains(said, "Menu's `items`"))
+    assert(contains(said, "at least one"))
+
+@test
+AN_ITEM_THAT_IS_NOT_A_RECORD_IS_REFUSED_AND_THE_MESSAGE_SAYS_WHICH()
+    // **The index is in the message**, because a menu of ten actions with one bad row is a mistake
+    // somebody has to find.
+    val said = fell(() -> markup(<Menu label="Actions" items={[{ id: "a", label: "A" }, 7]}/>))
+
+    assert(contains(said, "Menu's `items`"))
+    assert(contains(said, "item 1"))
+
+@test
+AN_ITEM_WITH_NO_ID_OR_NO_LABEL_IS_REFUSED()
+    val one = fell(() -> markup(<Menu label="Actions" items={[{ label: "A" }]}/>))
+    val two = fell(() -> markup(<Menu label="Actions" items={[{ id: "a" }]}/>))
+    val three = fell(() -> markup(<Menu label="Actions" items={[{ id: 1, label: "A" }]}/>))
+
+    assert(contains(one, "`id`"))
+    assert(contains(two, "`label`"))
+    assert(contains(three, "`id`"))
+
+@test
+AN_ITEMS_ONCHOOSE_DISABLED_OR_DANGER_OF_THE_WRONG_SHAPE_IS_REFUSED()
+    val one = fell(() -> markup(<Menu label="Actions" items={[{ id: "a", label: "A", onChoose: "go" }]}/>))
+    val two = fell(() -> markup(<Menu label="Actions" items={[{ id: "a", label: "A", disabled: "yes" }]}/>))
+    val three = fell(() -> markup(<Menu label="Actions" items={[{ id: "a", label: "A", danger: 1 }]}/>))
+
+    assert(contains(one, "`onChoose`"))
+    assert(contains(one, "item 0"))
+    assert(contains(two, "`disabled`"))
+    assert(contains(three, "`danger`"))
+
+@test
+TWO_ITEMS_NAMING_THE_SAME_ID_ARE_REFUSED()
+    // **Two elements with one `id` is a page where the caret an arrow moves by id lands on whichever
+    // the browser found first**, which looks like a menu that sometimes skips a row.
+    val said = fell(() -> markup(<Menu label="Actions" items={[{ id: "a", label: "A" }, { id: "a", label: "Again" }]}/>))
+
+    assert(contains(said, "twice"))
+    assert(contains(said, "\"a\""))
+
+@test
+A_MENU_WITH_NO_LABEL_IS_REFUSED_BECAUSE_THE_BUTTON_HAS_NOTHING_TO_SAY()
+    val said = fell(() -> markup(<Menu items={Three}/>))
+
+    assert(contains(said, "Menu's `label`"))
+    assert(contains(said, "nothing"))
+
+@test
+AN_ALIGN_THAT_IS_NOT_ONE_OF_THE_TWO_WORDS_IS_REFUSED_AND_THE_MESSAGE_LISTS_THEM()
+    val said = fell(() -> markup(<Menu label="Actions" items={Three} align="left"/>))
+
+    assert(contains(said, "Menu's `align`"))
+    assert(contains(said, "\"start\", \"end\""))
+
+@test
+AN_ID_THAT_IS_NOT_TEXT_IS_REFUSED()
+    assert(contains(fell(() -> markup(<Menu label="Actions" items={Three} id={9}/>)), "Menu's `id`"))
+
+@test
+A_CLASS_THAT_IS_NOT_TEXT_IS_REFUSED_LIKE_EVERY_OTHER_COMPONENTS()
+    assert(contains(fell(() -> markup(<Menu label="Actions" items={Three} class={3}/>)), "`class`"))

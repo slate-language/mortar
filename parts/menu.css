@@ -1,0 +1,136 @@
+/* A button that opens a list of things to do.
+ *
+ * **THE LIST IS THE RAISED SURFACE AND THE MIDDLE SHADOW, WHICH IS THE LIBRARY'S ELEVATION FOR
+ * *THIS IS OVER THE PAGE*.** A `Card` is flat, a `Post` is raised and a `Confirm` is the largest
+ * shadow there is; a menu sits between the last two, because it is over the page without being in
+ * front of it -- the page underneath is still the thing being read and a click on it is a click.
+ *
+ * **SQUARE CORNERS, BECAUSE EVERY ROW IN IT IS SOMETHING YOU DO.** The library's rule is that a
+ * pill is what you choose and a square corner is what you do, so nothing here is shaped like a
+ * `Tag`, a tab or a `Segmented` chip however much a list of rows resembles one.
+ *
+ * **THE BUTTON IS `button.css`'s AND THIS SHEET ONLY SAYS WHERE IT IS.** A menu's trigger is a
+ * button, and a second set of rules that only looked like one is how a library grows two answers to
+ * one question -- the same arrangement `Confirm` makes with its two answers.
+ *
+ * **THE FOCUS RING IS `theme.css`'s AND IS NOT REPEATED HERE.** One ring for the whole library is
+ * the point of `--m-ring`, and its rule already reaches every `button` in this component, which is
+ * the whole of what can hold the caret.
+ *
+ * **Motion is `--m-quick` and nothing else**, so the reduced-motion block in `tokens.css` covers it
+ * without a query of its own.
+ */
+
+.m-menu {
+    position: relative;
+    display: inline-block;
+
+    /* The trigger says which way the list will go, which is the one thing `button.css` has no
+     * opinion about. */
+    & .m-menu-button {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--m-space-2);
+
+        /* The chevron, drawn rather than written: a character would be a glyph the reader's font
+         * may not have, and an image would be a request. It turns over when the list is open. */
+        &::after {
+            content: "";
+            width: .5em;
+            height: .5em;
+            border-right: 2px solid currentcolor;
+            border-bottom: 2px solid currentcolor;
+            transform: translateY(-.15em) rotate(45deg);
+            transition: transform var(--m-quick) var(--m-ease);
+        }
+
+        &[aria-expanded="true"]::after { transform: translateY(.1em) rotate(-135deg); }
+    }
+
+    /* The list hangs under the button from whichever edge `align` named, and it is as wide as its
+     * longest row up to a limit -- past that the row wraps rather than the menu running off the
+     * side of a phone. */
+    & .m-menu-list {
+        position: absolute;
+        z-index: 30;
+        top: calc(100% + var(--m-space-1));
+        margin: 0;
+        padding: var(--m-space-1);
+        list-style: none;
+        min-width: 100%;
+        max-width: min(18rem, calc(100vw - var(--m-space-6)));
+        background: var(--m-raised);
+        color: var(--m-ink);
+        border: 1px solid var(--m-line);
+        border-radius: var(--m-radius);
+        box-shadow: var(--m-shadow);
+
+        &.start { inset-inline-start: 0; }
+
+        &.end { inset-inline-end: 0; }
+
+        /* **`hidden` is written out rather than left to the browser**, the rule above having given
+         * the list a `display` of its own -- and a layout rule beats the user agent's `[hidden]`
+         * every time. */
+        &[hidden] { display: none; }
+    }
+
+    & .m-menu-row { margin: 0; }
+
+    /* A row is a full-width target with its text on the left, which is what tells a list of actions
+     * apart from a row of buttons: you are picking a line, not pressing a chip. */
+    & .m-menu-item {
+        appearance: none;
+        border: 0;
+        background: transparent;
+        font: inherit;
+        cursor: pointer;
+        display: block;
+        width: 100%;
+        text-align: start;
+        padding: var(--m-space-2) var(--m-space-3);
+        border-radius: var(--m-radius-sm);
+        font-size: var(--m-text-ui);
+        line-height: var(--m-lead-ui);
+        color: var(--m-ink);
+        transition: background-color var(--m-quick) var(--m-ease),
+                    color var(--m-quick) var(--m-ease);
+
+        &:hover { background: color-mix(in oklab, var(--m-ink) 6%, transparent); }
+
+        &:active { background: color-mix(in oklab, var(--m-ink) 10%, transparent); }
+
+        /* The destructive one, in the library's one colour for *this cannot be taken back* -- the
+         * same token `Button`'s danger variant and `Confirm`'s tone are written from. */
+        &.danger {
+            color: var(--m-danger);
+
+            &:hover { background: var(--m-danger-soft); }
+
+            &:active { background: color-mix(in oklab, var(--m-danger) 16%, transparent); }
+        }
+
+        /* **`aria-disabled` and not `disabled`**, so the action is still announced and still says
+         * what it is called; what changes is that nothing lands on it and nothing chooses it. */
+        &[aria-disabled="true"] {
+            color: var(--m-ink-faint);
+            cursor: default;
+
+            &:hover, &:active { background: transparent; }
+        }
+    }
+
+    /* On a phone the list is the width of the screen less a margin and hangs from the start edge
+     * whatever `align` said -- an `end`-aligned list on a narrow screen is one that runs off the
+     * other side instead. */
+    @media (width < 26rem) {
+        & .m-menu-list {
+            max-width: calc(100vw - var(--m-space-5));
+
+            &.end {
+                inset-inline-start: 0;
+                inset-inline-end: auto;
+            }
+        }
+    }
+}
