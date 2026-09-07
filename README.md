@@ -9,7 +9,7 @@ stylesheet is a file the compiler reads and the program carries, and a page ends
 for exactly the components it rendered, on a server and in a browser alike.
 
 ```
-slate add github.com/slate-language/mortar
+slate install github.com/slate-language/mortar
 ```
 
 ```slate
