@@ -31,6 +31,7 @@
 // | `TagList` | `tags`, `href`, `current`, `onChoose` |
 // | `Pagination` | `page`, `size`, `total`, `href`, `onChoose`, `unit` |
 // | `Segmented` | `options`, `value`, `href`, `onChoose`, `label` |
+// | `Tabs` | `tabs`, `selected`, `initial`, `onSelect`, `label`, `id` |
 // | `SortControls` | `options`, `sort`, `href`, `onChoose`, `label` |
 // | `EmptyState` | `title`, `detail`, `children` |
 // | `Problem` | `problem`, `title`, `detail`, `status`, `errors`, `reason` |
@@ -58,6 +59,7 @@ import { post, postList, Levels as postLevels } from "./parts/post.slx"
 import { tag, tagList } from "./parts/tags.slx"
 import { pagination } from "./parts/pagination.slx"
 import { segmented, sortControls } from "./parts/segmented.slx"
+import { tabs } from "./parts/tabs.slx"
 import { emptyState } from "./parts/empty.slx"
 import { problem, reasonOf } from "./parts/problem.slx"
 import { live, toast, Manner as liveWords, Tones as toneWords } from "./parts/live.slx"
@@ -99,6 +101,12 @@ export val TagList = tagList
 export val Pagination = pagination
 export val Segmented = segmented
 export val SortControls = sortControls
+
+// **`Tabs` is the choice that has no address**, which is what separates it from the two above: a
+// sort order is part of a page's URL and several panels of one page are not. It is the library's
+// only keyboard-navigated control -- arrows move along the row and select as they go.
+
+export val Tabs = tabs
 
 // -- what the page has to say ----------------------------------------------------------------------
 

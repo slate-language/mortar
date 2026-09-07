@@ -88,6 +88,7 @@ Toast's `messages`, item 1, has no `id`
 | `Pagination` | `page`, `size`, `total`, `href`, `onChoose`, `unit` |
 | `Segmented` | `options`, `value`, `href`, `onChoose`, `label` |
 | `SortControls` | `options`, `sort`, `href`, `onChoose`, `label` |
+| `Tabs` | `tabs`, `selected`, `initial`, `onSelect`, `label`, `id` |
 | `EmptyState` | `title`, `detail`, `children` |
 | `Problem` | `problem`, `title`, `detail`, `status`, `errors`, `reason` |
 | `Live` | `live`, `atomic`, `children` |
@@ -245,6 +246,39 @@ That route is for the extra thing, not the cookie — `Theme` has already writte
 `onChange` runs, so a page that wants nothing more than the colour to persist needs no `onChange` and
 no route at all.
 
+## Tabs, and the choice with no address
+
+**`Segmented` and `Tabs` are the two halves of one question, and the answer is whether the choice can
+be bookmarked.** A sort order or a filter is part of the page's URL — somebody can send it to somebody
+else and press back out of it — so `Segmented` is a list of real anchors and works on a page whose
+script never ran. Several panels of one page shown one at a time are not an address, and `Tabs` is a
+row of buttons: nothing in it is an anchor and nothing in it touches the address bar.
+
+```slate
+<Tabs tabs={[{ id: "replies", label: "Replies", panel: <Replies/> },
+             { id: "about", label: "About", panel: <About/> }]}
+      label="Thread"/>
+```
+
+**It is controlled by `selected` and uncontrolled without it**, as above. A tab press has to change
+what is showing whether or not the application is holding the answer — a `Tabs` written with no state
+at all would otherwise be a row of buttons that does nothing — so the component keeps its own and
+`selected`, where it is given, wins over it on every render. `initial` says which tab an uncontrolled
+row starts on.
+
+The keyboard is the WAI-ARIA tabs pattern, and `tests-dom/tabs.slx` measures every part of it against
+jsdom:
+
+- **selection follows focus** — *automatic activation*, so an arrow key moves the caret to the next
+  tab and selects it in the same motion, and a reader arrowing along the row sees each panel as they
+  pass it;
+- **ArrowLeft** and **ArrowRight** move along the row and **wrap** at both ends; **Home** and **End**
+  go to the first and the last;
+- the caret lives in exactly one tab — the roving `tabindex` — so a Tab press enters the row at the
+  tab in force and the next one leaves the row rather than walking through every choice;
+- every panel is rendered and the unselected ones carry `hidden`, so a trip to another tab and back
+  keeps whatever a panel had in it.
+
 ## Confirming a destructive action
 
 **`Confirm` is the one component here that renders nothing on a server** — open or closed, not even
@@ -289,10 +323,10 @@ That is not free. `{n} replies` is a run of text children a parser reads back as
 lath 0.5.1 settled them in the tree. Every component here is written the ordinary way and the suite
 is what says so.
 
-**Two components import a host, and every other one imports none.** `Theme` reaches `dom` for
-the cookie it persists a colour with, and `Confirm` reaches it for the body it portals into and the
-caret it moves; both ask `host()` first, so the call is simply not made where there is no browser to
-make it in. Everything else in the library is host-free and renders under the interpreter, beside
+**Three components import a host, and every other one imports none.** `Theme` reaches `dom` for
+the cookie it persists a colour with, `Confirm` reaches it for the body it portals into and the caret
+it moves, and `Tabs` reaches it for the tab an arrow key puts the caret in; each asks `host()` first,
+so the call is simply not made where there is no browser to make it in. Everything else in the library is host-free and renders under the interpreter, beside
 `slate:http` on a server, and in a browser, from the same source.
 
 ## The tests

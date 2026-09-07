@@ -1,0 +1,90 @@
+/* One set of panels with one of them showing, and a row of buttons that says which.
+ *
+ * **A TAB IS A PILL, BECAUSE A TAB IS A CHOICE.** The library's rule is that a pill is what you
+ * choose and a square corner is what you do, so the row here is the same shape as `Segmented`'s
+ * choices -- and the two are told apart by their setting rather than by their corners: `Segmented`
+ * is a sunken track with a raised chip in it, and this is a plain row over a hairline, because a set
+ * of tabs is the top edge of the thing under it rather than a control sitting beside one.
+ *
+ * **`aria-selected` is the only thing that says which tab is in force.** There is no `.selected`
+ * class to forget, so the look cannot drift from what a reader is told -- the same arrangement
+ * `Segmented` makes with `aria-current`.
+ *
+ * **THE FOCUS RING IS `theme.css`'s AND IS NOT REPEATED HERE.** One ring for the whole library is
+ * the point of `--m-ring`, and its rule already reaches both of the things in this component that
+ * can hold the caret: a `button`, and the panel, which is in the list by its `[tabindex]`.
+ *
+ * **Motion is `--m-quick` and nothing else**, so the reduced-motion block in `tokens.css` covers it
+ * without a query of its own.
+ */
+
+.m-tabs {
+    display: flex;
+    flex-direction: column;
+    gap: var(--m-space-4);
+
+    /* The row sits on a hairline that reads as the top edge of the panel below it. It wraps rather
+     * than scrolls, so a long set of tabs takes a second line instead of hiding its own tail. */
+    & .m-tabs-list {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--m-space-1);
+        padding-bottom: var(--m-space-2);
+        border-bottom: 1px solid var(--m-line);
+    }
+
+    /* A button arrives with the browser's own face, border and typeface; these lines take it away
+     * so that what is left is the library's own control. */
+    & .m-tab {
+        appearance: none;
+        border: 0;
+        background: transparent;
+        font: inherit;
+        cursor: pointer;
+        padding: var(--m-space-1) var(--m-space-4);
+        border-radius: var(--m-pill);
+        font-size: var(--m-text-ui);
+        font-weight: var(--m-weight-medium);
+        line-height: 1.6;
+        color: var(--m-ink-soft);
+        white-space: nowrap;
+        transition: background-color var(--m-quick) var(--m-ease),
+                    color var(--m-quick) var(--m-ease);
+
+        &:hover {
+            color: var(--m-ink);
+            background: color-mix(in oklab, var(--m-ink) 6%, transparent);
+        }
+
+        &:active { background: color-mix(in oklab, var(--m-ink) 10%, transparent); }
+
+        /* The one in force: the accent's own quiet ground, which is the library's answer for
+         * *this is the thing you are looking at* everywhere else too. */
+        &[aria-selected="true"] {
+            background: var(--m-accent-soft);
+            color: var(--m-accent);
+            font-weight: var(--m-weight-semi);
+        }
+    }
+
+    /* **`hidden` is written out rather than left to the browser**, a panel being a child of a flex
+     * column -- and a `display` from a layout rule beats the user agent's `[hidden]` every time. */
+    & .m-tabs-panel {
+        margin: 0;
+
+        &[hidden] { display: none; }
+    }
+
+    /* On a phone the row is the width of the screen and the tabs share it, so a set of two or three
+     * fills the line instead of huddling on the left. */
+    @media (width < 26rem) {
+        gap: var(--m-space-3);
+
+        & .m-tab {
+            flex: 1 1 auto;
+            padding-inline: var(--m-space-2);
+            text-align: center;
+        }
+    }
+}

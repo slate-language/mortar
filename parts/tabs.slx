@@ -1,0 +1,189 @@
+// One set of panels with one of them showing, and a row of buttons that says which.
+//
+// **IT IS THE WAI-ARIA TABS PATTERN AND NOT A ROW OF LINKS.** `Segmented` is the control for a
+// choice that has an ADDRESS -- a sort order, a filter -- and it is still the one to reach for when
+// somebody could bookmark the answer or press back out of it. Tabs are the other case: several
+// panels of one page, shown one at a time, where the choice is a view of the same thing rather than
+// a different page. Nothing here is an anchor and nothing here touches the address bar.
+//
+// **SELECTION FOLLOWS FOCUS, WHICH IS THE PATTERN CALLED AUTOMATIC ACTIVATION.** An arrow key moves
+// the caret to the next tab and selects it in the same motion, so a reader arrowing along the row
+// sees each panel as they pass it. The alternative -- moving the caret and waiting for a Return or a
+// space -- is what a set of tabs needs only when showing a panel is expensive, and none of these
+// is: the panels are all rendered and the unselected ones carry `hidden`.
+//
+// **THE CARET LIVES IN EXACTLY ONE TAB, WHICH IS THE ROVING TABINDEX.** The selected tab is
+// `tabindex="0"` and every other one is `-1`, so a Tab press from outside the row enters it at the
+// tab that is in force and the next Tab press leaves the row altogether rather than walking through
+// every choice. The arrows are what move inside it, and they wrap; Home and End go to the ends.
+//
+// The shape it is being built to:
+//
+//     <Tabs tabs={[{ id: "replies", label: "Replies", panel: <Replies/> },
+//                  { id: "about", label: "About", panel: <About/> }]}
+//           selected={which} onSelect={setWhich} label="Thread"/>
+//
+// **It is controlled by `selected` and uncontrolled without it.** A tab press has to change what is
+// showing whether or not the application is holding the answer -- otherwise a `Tabs` written with no
+// state at all is a row of buttons that does nothing -- so the component keeps its own answer and
+// `selected`, where it is given, wins over it on every render. `initial` names which tab an
+// uncontrolled `Tabs` starts on, and the first one is the default.
+//
+// **The panels are all rendered and the unselected ones are `hidden`.** A tab press is then an
+// attribute change rather than a mount, which is what keeps whatever a panel had in it -- a
+// half-filled form, a scroll position -- across a trip to another tab and back.
+
+import { createElement, Fragment, useState, style } from lath
+import { byId, focus } from dom
+
+import tokens from "./tokens.css"
+import sheet from "./tabs.css"
+
+import { classes, list, maybeFn, maybeText, said, text } from "./props.sl"
+
+// The tabs, read once: each is a record carrying an `id` and a `label`, and no two of them name the
+// same id.
+//
+// **The duplicate is worth its own sentence.** Two tabs with one id write two elements with one
+// `id` attribute, and every `aria-controls` and `aria-labelledby` on the page then points at
+// whichever the browser happened to find first -- which looks like a component that sometimes
+// shows the wrong panel rather than like the mistake it is.
+idsOf(all: array) -> array =
+    val seen = []
+    var at = 0
+
+    for one in all
+        if !(one is object)
+            throw "Tabs's `tabs`, item " + string(at) + ", is a record, and is " + said(one)
+
+        val who = one.id ?? null
+        val what = one.label ?? null
+
+        if !(who is string)
+            throw "Tabs's `tabs`, item " + string(at) + ", has an `id` that is text, and is " + said(who)
+
+        if !(what is string)
+            throw "Tabs's `tabs`, item " + string(at) + ", has a `label` that is text, and is " + said(what)
+
+        if seen.indexOf(who) != null
+            throw "Tabs's `tabs` names \"" + who + "\" twice, and a tab is identified by its `id`"
+
+        seen.push(who)
+
+        at = at + 1
+
+    seen
+
+// One set of panels with one of them showing, and a row of buttons that says which.
+export tabs({ tabs: all = [], selected = null, initial = null, onSelect = null, label = null,
+              id = "m-tabs", class: extra = "" }) =
+    style(tokens)
+    style(sheet)
+
+    val rows = list("Tabs", "tabs", all)
+
+    // **A tablist with nothing in it is refused rather than rendered empty.** An empty row of tabs
+    // is a component that was handed the wrong list, and a page that quietly shows nothing is how
+    // that gets found in a browser instead of here.
+    if rows.length == 0
+        throw "Tabs's `tabs` is at least one tab, and is empty"
+
+    val ids = idsOf(rows)
+    val given = maybeText("Tabs", "selected", selected)
+    val first = maybeText("Tabs", "initial", initial)
+    val chose = maybeFn("Tabs", "onSelect", onSelect)
+    val name = maybeText("Tabs", "label", label)
+    val own = text("Tabs", "id", id)
+
+    // **A `selected` naming no tab is a mistake and not an empty state.** Left to itself it renders
+    // every panel hidden and every tab unselected, which reads as a broken component.
+    if given != null && ids.indexOf(given) == null
+        throw "Tabs's `selected` names one of the tabs, and is " + said(selected)
+
+    if first != null && ids.indexOf(first) == null
+        throw "Tabs's `initial` names one of the tabs, and is " + said(initial)
+
+    // The component's own answer, which `selected` overrides wherever the application has one.
+    // A `held` that is no longer in the list -- the tabs having changed under it -- falls back to
+    // the first rather than showing nothing.
+    val [held, setHeld] = useState(first ?? ids[0])
+    val mine = if ids.indexOf(held) == null then ids[0] else held
+    val on = given ?? mine
+
+    choose(who: string) =
+        setHeld(who)
+
+        if chose != null then chose(who)
+
+        null
+
+    // **Selection and the caret move together**, which is the whole of automatic activation. The
+    // tab buttons are all on the page already -- only their `tabindex` and `aria-selected` change --
+    // so the one being moved to exists to be focused before the render that reselects it.
+    move(who: string) =
+        choose(who)
+
+        if host() == "browser"
+            val node = byId(own + "-tab-" + who)
+
+            if node != null then focus(node)
+
+        null
+
+    one(row) =
+        val who = row.id
+        val at = ids.indexOf(who)
+        val here = on == who
+
+        picked(e) =
+            choose(who)
+
+            null
+
+        keyed(e) =
+            if e.key == "ArrowRight"
+                e.prevent()
+                move(ids[if at + 1 >= ids.length then 0 else at + 1])
+            elif e.key == "ArrowLeft"
+                e.prevent()
+                move(ids[if at == 0 then ids.length - 1 else at - 1])
+            elif e.key == "Home"
+                e.prevent()
+                move(ids[0])
+            elif e.key == "End"
+                e.prevent()
+                move(ids[ids.length - 1])
+
+            null
+
+        val out = <button key={who} type="button" role="tab" class="m-tab"
+                          id={own + "-tab-" + who}
+                          aria-selected={if here then "true" else "false"}
+                          aria-controls={own + "-panel-" + who}
+                          tabindex={if here then "0" else "-1"}
+                          onClick={picked} onKeyDown={keyed}>{row.label}</button>
+
+        out
+
+    // **The panel takes the caret itself**, which is what a reader arrowing to a tab and then
+    // pressing Tab lands on -- and it is the only way into a panel whose content has nothing
+    // focusable in it at all.
+    panel(row) =
+        val who = row.id
+        val here = on == who
+
+        val out = <div key={who} class="m-tabs-panel" role="tabpanel"
+                       id={own + "-panel-" + who}
+                       aria-labelledby={own + "-tab-" + who}
+                       tabindex="0" hidden={!here}>{row.panel ?? null}</div>
+
+        out
+
+    // **The row is named only where the application named it**, the same rule `Segmented` follows:
+    // an unnamed thing in a reader's list of landmarks is worse than none at all.
+    val out = <div class={classes("Tabs", "m-tabs", extra)}>
+        <div class="m-tabs-list" role="tablist" aria-label={name}>{rows.map(one)}</div>
+        {rows.map(panel)}
+    </div>
+
+    out

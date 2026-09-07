@@ -230,6 +230,44 @@ in a cookie.
 
 `Segmented` with `sort` in place of `value` and `label` defaulting to `"Sort"`.
 
+## Tabs
+
+| prop | default | what it is |
+|---|---|---|
+| `tabs` | `[]` | records carrying an `id`, a `label` and a `panel`, and there has to be at least one |
+| `selected` | `null` | the tab in force; with it the component is controlled |
+| `initial` | `null` | which tab an *uncontrolled* `Tabs` starts on — the first one by default |
+| `onSelect` | `null` | called with the id of the tab chosen |
+| `label` | `null` | names the `role="tablist"`; with none it is unnamed |
+| `id` | `"m-tabs"` | what the tabs and the panels are identified by, for `aria-controls` and `aria-labelledby` |
+
+**It is the choice with no address, which is what separates it from `Segmented`.** A sort order or a
+filter is part of the page's URL — somebody can bookmark it, send it to somebody else and press back
+out of it — and `Segmented` is a list of anchors for exactly that reason. Several panels of one page
+shown one at a time are not an address, and nothing here is an anchor.
+
+**It is controlled by `selected` and uncontrolled without it.** A tab press has to change what is
+showing whether or not the application is holding the answer, so the component keeps its own and
+`selected`, where it is given, wins over it on every render.
+
+**Every panel is rendered and the unselected ones carry `hidden`**, so a trip to another tab and back
+keeps whatever a panel had in it — a half-filled form, a scroll position.
+
+The keyboard, which is the WAI-ARIA tabs pattern:
+
+- **selection follows focus** — this is *automatic activation*, so an arrow key moves the caret to
+  the next tab and selects it in the same motion, and a reader arrowing along the row sees each
+  panel as they pass it;
+- **ArrowLeft** and **ArrowRight** move along the row and **wrap** at both ends; **Home** and **End**
+  go to the first and the last;
+- the caret lives in exactly one tab — the selected one is `tabindex="0"` and every other is `-1`,
+  so a Tab press enters the row at the tab in force and the next one leaves the row altogether;
+- the panel is `tabindex="0"`, which is what a Tab press out of the row lands on and the only way
+  into a panel whose content has nothing focusable in it.
+
+Refused: a `tabs` that is not a list, an empty one, an item that is not a record or carries no text
+`id` or `label`, two items naming the same `id`, and a `selected` or an `initial` naming no tab.
+
 ## EmptyState
 
 | prop | default | what it is |

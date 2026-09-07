@@ -1,0 +1,197 @@
+import { createElement, Fragment, mount, html } from lath
+import { Tabs } from "../mortar.slx"
+
+import { countOf, fell, tree } from "./support.sl"
+
+// One set of panels with one of them showing, on the host that has no keyboard.
+//
+// **WHAT A STRING CAN ANSWER IS THE SHAPE, AND THE SHAPE IS MOST OF THE PATTERN.** The roles, the
+// two directions of the wiring between a tab and its panel, the roving tabindex, and which panels
+// carry `hidden` are all attributes in the markup a server sends -- so a page whose script never ran
+// still shows the right panel and still tells a reader what the row is. What arrows and Home and End
+// do is in `tests-dom/tabs.slx`, because moving the caret needs a document to move it in.
+
+markup(el) -> string = tree(html(mount(el)))
+whole(el) -> string = html(mount(el))
+
+val Two = [{ id: "replies", label: "Replies", panel: "eleven of them" },
+           { id: "about", label: "About", panel: "who wrote it" }]
+
+// -- the shape --------------------------------------------------------------------------------------
+
+@test
+A_ROW_OF_TABS_IS_A_TABLIST_OF_BUTTONS_AND_NOT_A_LIST_OF_LINKS()
+    // **The choice a set of tabs makes has no address**, which is the whole of what separates it
+    // from `Segmented`: several panels of one page are a view of the same thing, not another page.
+    val out = markup(<Tabs tabs={Two}/>)
+
+    assert(contains(out, "<div class=\"m-tabs-list\" role=\"tablist\">"))
+    assertEq(countOf(out, "role=\"tab\""), 2)
+    assertEq(countOf(out, "role=\"tabpanel\""), 2)
+    assertEq(countOf(out, "<a "), 0)
+    assertEq(countOf(out, "type=\"button\""), 2)
+
+@test
+EACH_TAB_NAMES_ITS_PANEL_AND_EACH_PANEL_NAMES_ITS_TAB()
+    // **The wiring goes both ways**, which is what lets a reader move from a tab to what it controls
+    // and be told, once there, which tab they came from.
+    val out = markup(<Tabs tabs={Two}/>)
+
+    assert(contains(out, "id=\"m-tabs-tab-replies\""))
+    assert(contains(out, "aria-controls=\"m-tabs-panel-replies\""))
+    assert(contains(out, "id=\"m-tabs-panel-replies\""))
+    assert(contains(out, "aria-labelledby=\"m-tabs-tab-replies\""))
+
+@test
+AN_ID_OF_ITS_OWN_IDENTIFIES_EVERY_TAB_AND_EVERY_PANEL()
+    // **Two sets of tabs on one page would otherwise write the same ids**, and an `aria-controls`
+    // pointing at a duplicate points at whichever the browser found first.
+    val out = markup(<Tabs tabs={Two} id="thread"/>)
+
+    assert(contains(out, "id=\"thread-tab-about\""))
+    assert(contains(out, "aria-controls=\"thread-panel-about\""))
+    assertEq(countOf(out, "m-tabs-tab-"), 0)
+
+@test
+EXACTLY_ONE_TAB_IS_SELECTED_AND_EVERY_OTHER_PANEL_IS_HIDDEN()
+    val out = markup(<Tabs tabs={Two} selected="about"/>)
+
+    assertEq(countOf(out, "aria-selected=\"true\""), 1)
+    assertEq(countOf(out, "aria-selected=\"false\""), 1)
+    assertEq(countOf(out, "hidden"), 1)
+    assert(contains(out, "id=\"m-tabs-tab-about\" aria-selected=\"true\""))
+
+@test
+EVERY_PANEL_IS_RENDERED_AND_THE_UNSELECTED_ONES_ARE_ONLY_HIDDEN()
+    // **A tab press is an attribute change rather than a mount**, which is what keeps a half-filled
+    // form in a panel across a trip to another tab and back -- and it means a server sends all of
+    // them, so a page with no script has every panel to show.
+    val out = markup(<Tabs tabs={Two}/>)
+
+    assert(contains(out, "eleven of them"))
+    assert(contains(out, "who wrote it"))
+
+@test
+THE_CARET_LIVES_IN_EXACTLY_ONE_TAB_WHICH_IS_THE_ROVING_TABINDEX()
+    // **A row of five tabs is one Tab press to enter and one to leave**, not five to walk through --
+    // and the one it is entered at is the one in force.
+    val out = markup(<Tabs tabs={Two} selected="about"/>)
+
+    assertEq(countOf(out, "tabindex=\"-1\""), 1)
+    assert(contains(out, "id=\"m-tabs-tab-about\" aria-selected=\"true\" aria-controls=\"m-tabs-panel-about\" tabindex=\"0\""))
+
+@test
+THE_PANEL_TAKES_THE_CARET_TOO()
+    // The only way into a panel whose content has nothing focusable in it at all.
+    val out = markup(<Tabs tabs={Two}/>)
+
+    assertEq(countOf(out, "role=\"tabpanel\" id=\"m-tabs-panel-replies\" aria-labelledby=\"m-tabs-tab-replies\" tabindex=\"0\""), 1)
+
+@test
+A_NAMED_ROW_SAYS_ITS_NAME_AND_AN_UNNAMED_ONE_SAYS_NOTHING()
+    assert(contains(markup(<Tabs tabs={Two} label="Thread"/>), "role=\"tablist\" aria-label=\"Thread\""))
+    // **`aria-labelledby` is on every panel**, so what is looked for is the attribute itself.
+    assert(!contains(markup(<Tabs tabs={Two}/>), "aria-label="))
+
+@test
+AN_UNCONTROLLED_SET_OF_TABS_STARTS_ON_THE_FIRST_ONE_OR_ON_INITIAL()
+    // **A `Tabs` written with no state at all still shows a panel**, which is what `initial` and the
+    // fallback to the first tab are between them for.
+    assert(contains(markup(<Tabs tabs={Two}/>), "id=\"m-tabs-tab-replies\" aria-selected=\"true\""))
+    assert(contains(markup(<Tabs tabs={Two} initial="about"/>), "id=\"m-tabs-tab-about\" aria-selected=\"true\""))
+
+@test
+SELECTED_WINS_OVER_INITIAL()
+    // The application holding the answer is the application deciding, on every render.
+    val out = markup(<Tabs tabs={Two} initial="about" selected="replies"/>)
+
+    assert(contains(out, "id=\"m-tabs-tab-replies\" aria-selected=\"true\""))
+
+@test
+A_CLASS_IS_APPENDED_TO_THE_COMPONENTS_OWN()
+    assert(contains(markup(<Tabs tabs={Two} class="wide"/>), "class=\"m-tabs wide\""))
+
+@test
+THE_SHEET_GOES_ON_THE_PAGE_ONCE_AND_SO_DO_THE_TOKENS()
+    // **`.m-tabs-list` and `.m-tabs-panel` both contain `.m-tabs`**, so what is counted is the rule's
+    // own opening brace -- the same proxy `tokens.css` is counted by.
+    val out = whole(<Tabs tabs={Two}/>)
+
+    assertEq(countOf(out, ".m-tabs {"), 1)
+    assertEq(countOf(out, ":root {"), 1)
+
+@test
+TWO_SETS_OF_TABS_ON_ONE_PAGE_STILL_CARRY_ONE_COPY_OF_THE_SHEET()
+    val out = whole(<Fragment><Tabs tabs={Two} id="one"/><Tabs tabs={Two} id="two"/></Fragment>)
+
+    assertEq(countOf(out, ".m-tabs {"), 1)
+
+// -- the refusals ------------------------------------------------------------------------------------
+
+@test
+A_TABS_THAT_IS_NOT_A_LIST_IS_REFUSED()
+    assert(contains(fell(() -> markup(<Tabs tabs="replies"/>)), "Tabs's `tabs`"))
+
+@test
+AN_EMPTY_SET_OF_TABS_IS_REFUSED_RATHER_THAN_RENDERED_EMPTY()
+    // A page that quietly shows nothing is how a component handed the wrong list gets found in a
+    // browser instead of here.
+    val said = fell(() -> markup(<Tabs tabs={[]}/>))
+
+    assert(contains(said, "Tabs's `tabs`"))
+    assert(contains(said, "at least one"))
+
+@test
+A_TAB_THAT_IS_NOT_A_RECORD_IS_REFUSED_AND_THE_MESSAGE_SAYS_WHICH()
+    // **The index is in the message**, because a list of ten tabs with one bad row is a mistake
+    // somebody has to find.
+    val said = fell(() -> markup(<Tabs tabs={[{ id: "a", label: "A" }, 7]}/>))
+
+    assert(contains(said, "Tabs's `tabs`"))
+    assert(contains(said, "item 1"))
+
+@test
+A_TAB_WITH_NO_ID_OR_NO_LABEL_IS_REFUSED()
+    val one = fell(() -> markup(<Tabs tabs={[{ label: "A" }]}/>))
+    val two = fell(() -> markup(<Tabs tabs={[{ id: "a" }]}/>))
+    val three = fell(() -> markup(<Tabs tabs={[{ id: 1, label: "A" }]}/>))
+
+    assert(contains(one, "`id`"))
+    assert(contains(two, "`label`"))
+    assert(contains(three, "`id`"))
+
+@test
+TWO_TABS_NAMING_THE_SAME_ID_ARE_REFUSED()
+    // **Two elements with one `id` is a page where every `aria-controls` points at whichever the
+    // browser found first**, which looks like a component that sometimes shows the wrong panel.
+    val said = fell(() -> markup(<Tabs tabs={[{ id: "a", label: "A" }, { id: "a", label: "Again" }]}/>))
+
+    assert(contains(said, "twice"))
+    assert(contains(said, "\"a\""))
+
+@test
+A_SELECTED_OR_AN_INITIAL_NAMING_NO_TAB_IS_REFUSED()
+    // Left to itself it renders every panel hidden and every tab unselected, which reads as a broken
+    // component rather than as the mistake it is.
+    val one = fell(() -> markup(<Tabs tabs={Two} selected="gone"/>))
+    val two = fell(() -> markup(<Tabs tabs={Two} initial="gone"/>))
+
+    assert(contains(one, "Tabs's `selected`"))
+    assert(contains(two, "Tabs's `initial`"))
+
+@test
+A_SELECTED_THAT_IS_NOT_TEXT_IS_REFUSED()
+    assert(contains(fell(() -> markup(<Tabs tabs={Two} selected={3}/>)), "Tabs's `selected`"))
+
+@test
+AN_ONSELECT_THAT_IS_NOT_A_FUNCTION_IS_REFUSED()
+    assert(contains(fell(() -> markup(<Tabs tabs={Two} onSelect="pick"/>)), "Tabs's `onSelect`"))
+
+@test
+A_LABEL_OR_AN_ID_THAT_IS_NOT_TEXT_IS_REFUSED()
+    assert(contains(fell(() -> markup(<Tabs tabs={Two} label={[1]}/>)), "Tabs's `label`"))
+    assert(contains(fell(() -> markup(<Tabs tabs={Two} id={9}/>)), "Tabs's `id`"))
+
+@test
+A_CLASS_THAT_IS_NOT_TEXT_IS_REFUSED_LIKE_EVERY_OTHER_COMPONENTS()
+    assert(contains(fell(() -> markup(<Tabs tabs={Two} class={3}/>)), "`class`"))

@@ -1,0 +1,312 @@
+import { createElement, Fragment, mount, useState } from lath
+import { domHost } from lath/dom
+import { Tabs } from "../mortar.slx"
+import { activeElement, attribute, byId } from dom
+
+import { at, click, fire, focus, inHead } from "./probe.slx"
+
+// The tabs against a real document, which is the only host that has a keyboard.
+//
+// **EVERY CLAIM THIS FILE MAKES IS ONE A STRING CANNOT ANSWER.** What the arrows do, where the caret
+// ends up, whether Home and End reach the ends, and whether `hidden` moves from one panel to another
+// when a tab is pressed: none of them is a shape in some markup, and between them they are the whole
+// of what makes a row of buttons a set of tabs.
+//
+// **Selection follows focus, so almost every assertion here is a pair** -- the panel that is showing
+// and the element the caret is in, checked together, because a pattern that moved one without the
+// other would pass half of these.
+
+countOf(s: string, sub: string) -> integer =
+    var found = 0
+    var from = 0
+
+    while true
+        val found_at = indexOf(s[from..], sub)
+
+        if found_at == null then break
+
+        found = found + 1
+        from = from + found_at + sub.length
+
+    found
+
+val Three = [{ id: "replies", label: "Replies", panel: "eleven of them" },
+             { id: "about", label: "About", panel: "who wrote it" },
+             { id: "raw", label: "Raw", panel: "the source" }]
+
+// The id of the element the caret is in, or empty where it is nowhere at all.
+caret() -> string =
+    val on = activeElement()
+
+    if on == null then return ""
+
+    attribute(on, "id") ?? ""
+
+// Which tab says it is the one in force, by its own id.
+selected() -> string =
+    var which = ""
+
+    for row in Three
+        val node = byId("m-tabs-tab-" + row.id)
+
+        if node != null && attribute(node, "aria-selected") == "true" then which = row.id
+
+    which
+
+// Whether a panel is showing, asked of the attribute the component actually writes.
+showing(who: string) -> boolean = attribute(byId("m-tabs-panel-" + who), "hidden") == null
+
+// The row a test presses keys in. **Uncontrolled**, which is the shape an application writes when
+// the tab in force is nobody else's business -- and the one that proves the component holds its own
+// answer rather than needing the caller to.
+plain({ told = null }) =
+    <Tabs tabs={Three} label="Thread" onSelect={told}/>
+
+val Plain = plain
+
+// The same row with the application holding the answer.
+held({ told = null }) =
+    val [which, setWhich] = useState("about")
+
+    pick(who) =
+        setWhich(who)
+
+        if told != null then told(who)
+
+        null
+
+    <Tabs tabs={Three} label="Thread" selected={which} onSelect={pick}/>
+
+val Held = held
+
+// -- what is on the page ------------------------------------------------------------------------------
+
+@test
+async ONE_PANEL_IS_SHOWING_AND_THE_OTHERS_CARRY_HIDDEN()
+    at("")
+
+    mount(<Plain/>, domHost("#page"))
+
+    await sleep(1)
+
+    assertEq(selected(), "replies")
+    assertEq(showing("replies"), true)
+    assertEq(showing("about"), false)
+    assertEq(showing("raw"), false)
+
+@test
+async THE_SHEET_ARRIVES_WITH_THE_TABS_AND_ONLY_ONCE()
+    // **The head is shared by the whole of this suite**, so what is asserted is that the count is 1
+    // rather than that it went from nothing to one.
+    at("")
+
+    mount(<Plain/>, domHost("#page"))
+
+    await sleep(1)
+
+    assertEq(countOf(inHead(), ".m-tabs {"), 1)
+
+// -- the pointer ---------------------------------------------------------------------------------------
+
+@test
+async A_CLICK_ON_A_TAB_SELECTS_IT_AND_MOVES_HIDDEN_TO_THE_PANEL_IT_LEFT()
+    at("")
+
+    mount(<Plain/>, domHost("#page"))
+
+    await sleep(1)
+
+    click("#m-tabs-tab-raw")
+
+    await sleep(1)
+
+    assertEq(selected(), "raw")
+    assertEq(showing("raw"), true)
+    assertEq(showing("replies"), false)
+
+@test
+async A_CLICK_TELLS_THE_APPLICATION_WHICH_TAB_IT_WAS()
+    var said = ""
+
+    told(who) =
+        said = who
+
+        null
+
+    at("")
+
+    mount(<Plain told={told}/>, domHost("#page"))
+
+    await sleep(1)
+
+    click("#m-tabs-tab-about")
+
+    await sleep(1)
+
+    assertEq(said, "about")
+
+// -- the keyboard --------------------------------------------------------------------------------------
+
+@test
+async ARROW_RIGHT_MOVES_THE_SELECTION_AND_THE_CARET_TOGETHER()
+    // **Automatic activation**: the panel changes as the caret passes, so a reader arrowing along
+    // the row sees each one rather than having to press Return at every stop.
+    at("")
+
+    mount(<Plain/>, domHost("#page"))
+
+    await sleep(1)
+
+    fire(byId("m-tabs-tab-replies"), "keydown key=ArrowRight")
+
+    await sleep(1)
+
+    assertEq(selected(), "about")
+    assertEq(caret(), "m-tabs-tab-about")
+    assertEq(showing("about"), true)
+    assertEq(showing("replies"), false)
+
+@test
+async ARROW_RIGHT_WRAPS_ROUND_THE_END_OF_THE_ROW()
+    at("")
+
+    mount(<Plain/>, domHost("#page"))
+
+    await sleep(1)
+
+    fire(byId("m-tabs-tab-replies"), "keydown key=End")
+
+    await sleep(1)
+
+    assertEq(caret(), "m-tabs-tab-raw")
+
+    fire(byId("m-tabs-tab-raw"), "keydown key=ArrowRight")
+
+    await sleep(1)
+
+    assertEq(selected(), "replies")
+    assertEq(caret(), "m-tabs-tab-replies")
+
+@test
+async ARROW_LEFT_GOES_THE_OTHER_WAY_AND_WRAPS_TOO()
+    // From the first tab, left is the last one -- which is what makes the row a ring rather than a
+    // line with two dead ends.
+    at("")
+
+    mount(<Plain/>, domHost("#page"))
+
+    await sleep(1)
+
+    fire(byId("m-tabs-tab-replies"), "keydown key=ArrowLeft")
+
+    await sleep(1)
+
+    assertEq(selected(), "raw")
+    assertEq(caret(), "m-tabs-tab-raw")
+
+    fire(byId("m-tabs-tab-raw"), "keydown key=ArrowLeft")
+
+    await sleep(1)
+
+    assertEq(selected(), "about")
+    assertEq(caret(), "m-tabs-tab-about")
+
+@test
+async HOME_AND_END_GO_TO_THE_ENDS()
+    at("")
+
+    mount(<Plain/>, domHost("#page"))
+
+    await sleep(1)
+
+    fire(byId("m-tabs-tab-replies"), "keydown key=End")
+
+    await sleep(1)
+
+    assertEq(selected(), "raw")
+    assertEq(caret(), "m-tabs-tab-raw")
+    assertEq(showing("raw"), true)
+
+    fire(byId("m-tabs-tab-raw"), "keydown key=Home")
+
+    await sleep(1)
+
+    assertEq(selected(), "replies")
+    assertEq(caret(), "m-tabs-tab-replies")
+    assertEq(showing("replies"), true)
+
+@test
+async THE_CARET_LIVES_IN_THE_SELECTED_TAB_AND_NOWHERE_ELSE_IN_THE_ROW()
+    // **The roving tabindex is what makes a row of tabs one stop on the way through a page**, and
+    // it has to follow the selection or the caret comes back to the wrong tab.
+    at("")
+
+    mount(<Plain/>, domHost("#page"))
+
+    await sleep(1)
+
+    fire(byId("m-tabs-tab-replies"), "keydown key=ArrowRight")
+
+    await sleep(1)
+
+    assertEq(attribute(byId("m-tabs-tab-about"), "tabindex"), "0")
+    assertEq(attribute(byId("m-tabs-tab-replies"), "tabindex"), "-1")
+    assertEq(attribute(byId("m-tabs-tab-raw"), "tabindex"), "-1")
+
+@test
+async A_KEY_THE_ROW_HAS_NOTHING_TO_SAY_ABOUT_LEAVES_IT_ALONE()
+    at("")
+
+    mount(<Plain/>, domHost("#page"))
+
+    await sleep(1)
+
+    focus(byId("m-tabs-tab-replies"))
+
+    fire(byId("m-tabs-tab-replies"), "keydown key=ArrowDown")
+
+    await sleep(1)
+
+    assertEq(selected(), "replies")
+    assertEq(caret(), "m-tabs-tab-replies")
+
+// -- when the application is holding the answer ----------------------------------------------------------
+
+@test
+async A_CONTROLLED_ROW_SHOWS_WHAT_THE_APPLICATION_SAYS_AND_STILL_TAKES_THE_ARROWS()
+    // **`selected` wins over the component's own answer on every render**, so a controlled row moves
+    // only because the application moved it -- and here it does, which is the ordinary wiring.
+    at("")
+
+    mount(<Held/>, domHost("#page"))
+
+    await sleep(1)
+
+    assertEq(selected(), "about")
+
+    fire(byId("m-tabs-tab-about"), "keydown key=ArrowRight")
+
+    await sleep(1)
+
+    assertEq(selected(), "raw")
+    assertEq(caret(), "m-tabs-tab-raw")
+    assertEq(showing("raw"), true)
+
+@test
+async A_CONTROLLED_ROW_THAT_IGNORES_ONSELECT_DOES_NOT_MOVE()
+    // **The other half of controlled, and the half that is easy to get wrong**: an application that
+    // takes the choice and declines it leaves the row exactly where it was, however many keys are
+    // pressed -- which is what `selected` winning actually means.
+    at("")
+
+    mount(<Tabs tabs={Three} label="Thread" selected="about"/>, domHost("#page"))
+
+    await sleep(1)
+
+    fire(byId("m-tabs-tab-about"), "keydown key=ArrowRight")
+
+    await sleep(1)
+
+    assertEq(selected(), "about")
+    assertEq(showing("about"), true)
+    assertEq(showing("raw"), false)
