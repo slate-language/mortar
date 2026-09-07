@@ -468,6 +468,58 @@ boolean, two items naming the same `id`, a missing `label`, and an `align` that 
 
 ---
 
+## Tooltip
+
+| prop | default | what it is |
+|---|---|---|
+| `text` | *required* | the words, which have to say something |
+| `placement` | `"top"` | which side of the trigger the note is on — `"top"`, `"bottom"`, `"start"` or `"end"` |
+| `delay` | `300` | how many milliseconds a pointer waits before the note appears |
+| `id` | `"m-tooltip"` | what the note is identified by, and what `aria-describedby` points at |
+| `children` | *required* | the trigger, and there is exactly one of it |
+
+**It is a description of its trigger and it holds nothing of its own.** The words say again, at more
+length, what the control already says — what an icon button does, what an abbreviation stands for.
+Anything only the tooltip knows is information a reader on a phone never sees and a reader on a
+keyboard sees only where the caret goes, so it belongs in the page instead: a `Field`'s `hint`, an
+`EmptyState`, a `Problem`. Nothing in a note can be pressed or selected.
+
+```slate
+<Tooltip text="Delete this thread"><Button variant="danger" label="Delete" onClick={remove}/></Tooltip>
+```
+
+**The trigger is the single child and it comes back unchanged but for one attribute.** Where it is a
+plain tag it is given `aria-describedby` pointing at the note, which is what makes the words a
+description of the control; where it is a text child or a component of the application's own — an
+attribute handed to either is nowhere at all — the wrapper carries it instead.
+
+**The note is rendered and carries `hidden`**, so a server sends the description and a hydrating page
+has nothing to correct. Only the *showing* needs a browser, which is `Menu`'s arrangement rather than
+`Confirm`'s.
+
+What shows and hides it:
+
+- **a pointer entering** shows it after `delay` and **a pointer leaving** hides it at once — the wait
+  is what keeps a note from flashing open on the way past every control on a toolbar;
+- **the caret arriving** shows it immediately and **the caret leaving** hides it, a caret being
+  somewhere on purpose;
+- **Escape** hides it while it is shown and **leaves the caret exactly where it was** — a tooltip is
+  something that appeared beside the reader, not a place the reader went, which is the whole of what
+  separates this from `Menu`;
+- the events are on the wrapper rather than on the trigger, the trigger being an element this
+  component did not write.
+
+**It does not measure anything, so it does not reposition at a viewport edge.** `placement` says which
+side the note is on and the stylesheet puts it there; a note on the `end` of a control against the
+edge of the window runs off it, and the answer is naming another side. On a screen narrower than
+26rem the two side placements go underneath instead, there being no room beside anything.
+
+Refused: a `text` that is not text or is empty, a `placement` that is none of the four words, a
+`delay` that is not a whole number of milliseconds or is below zero, an `id` that is not text, and no
+child or more than one child.
+
+---
+
 ## Confirm
 
 | prop | default | what it is |

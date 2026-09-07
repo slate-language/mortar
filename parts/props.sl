@@ -54,6 +54,17 @@ export count(who: string, name: string, value) -> integer
 
     integer(value)
 
+// A number of milliseconds, which is a whole number of them and never below zero.
+//
+// **`count` truncates and a duration must not.** A `delay` of `1.5` is a number somebody meant to
+// write as a whole one and a negative delay is a timer that fires before it was armed, so both are
+// refused here rather than quietly rounded into something that works.
+export millis(who: string, name: string, value) -> integer
+    if !(value is number) || value < 0 || integer(value) != value
+        throw of(who, name) + " is a whole number of milliseconds, and is " + said(value)
+
+    integer(value)
+
 // A moment, as the seconds since the epoch a row carries.
 //
 // **A number and not a date**, because the two hosts have to agree about the text: a server rendering

@@ -1,0 +1,175 @@
+import { createElement, Fragment, mount, html } from lath
+import { Tooltip } from "../mortar.slx"
+
+import { countOf, fell, tree } from "./support.sl"
+
+// A note about the thing under the pointer, on the host that has no pointer.
+//
+// **WHAT A STRING CAN ANSWER IS THE SHAPE, AND THE SHAPE IS THE DESCRIPTION ITSELF.** The wrapper,
+// the trigger it was given back unchanged but for one attribute, the `role="tooltip"` the words are
+// in, the `aria-describedby` that ties the two together and the `hidden` that says the note is not
+// showing are all attributes in the markup -- so a page whose script never ran still carries the
+// description for anything that reads it. What a pointer does, what the caret does and what Escape
+// does is in `tests-dom/tooltip.slx`, because none of it is a shape.
+
+markup(el) -> string = tree(html(mount(el)))
+whole(el) -> string = html(mount(el))
+
+// -- the shape --------------------------------------------------------------------------------------
+
+@test
+A_TOOLTIP_IS_ITS_TRIGGER_AND_A_NOTE_BESIDE_IT()
+    val out = markup(<Tooltip text="Delete this thread"><button type="button">Delete</button></Tooltip>)
+
+    assert(contains(out, "class=\"m-tooltip\""))
+    assert(contains(out, ">Delete<"))
+    assertEq(countOf(out, "role=\"tooltip\""), 1)
+    assert(contains(out, ">Delete this thread<"))
+
+@test
+THE_TRIGGER_IS_THE_ONE_THAT_SAYS_WHICH_NOTE_DESCRIBES_IT()
+    // **`aria-describedby` goes on the CONTROL and not on the wrapper**, which is the whole of what
+    // makes the words a description of the button rather than a second thing on the page.
+    val out = markup(<Tooltip text="Delete this thread"><button type="button">Delete</button></Tooltip>)
+
+    assert(contains(out, "<button type=\"button\" aria-describedby=\"m-tooltip\""))
+    assert(contains(out, "id=\"m-tooltip\""))
+    assertEq(countOf(out, "aria-describedby=\"m-tooltip\""), 1)
+
+@test
+A_TRIGGER_THAT_IS_NOT_A_TAG_LEAVES_THE_DESCRIPTION_ON_THE_WRAPPER()
+    // **An attribute written on a string is nowhere at all**, so a plain text trigger has the
+    // wrapper carry it -- and there is still exactly one of them on the page.
+    val out = markup(<Tooltip text="What this means">{"abbr"}</Tooltip>)
+
+    assert(contains(out, "<span class=\"m-tooltip\" aria-describedby=\"m-tooltip\""))
+    assertEq(countOf(out, "aria-describedby=\"m-tooltip\""), 1)
+
+@test
+A_NOTE_ARRIVES_HIDDEN_AND_THE_WHOLE_OF_IT_IS_SENT()
+    // **Rendered and hidden rather than absent**, which is `Menu`'s arrangement: the description is
+    // in the markup a server sent, and only the SHOWING of it needs a browser.
+    val out = markup(<Tooltip text="Delete this thread"><button type="button">Delete</button></Tooltip>)
+
+    assertEq(countOf(out, "hidden"), 1)
+    assert(contains(out, ">Delete this thread<"))
+
+@test
+PLACEMENT_IS_WRITTEN_ON_THE_NOTE_AND_THE_STYLESHEET_IS_WHAT_READS_IT()
+    // **The side is an attribute and not a class**, so a rule selects on it and nothing has to
+    // compose a class name out of a word a caller wrote.
+    assert(contains(markup(<Tooltip text="Save"><button>S</button></Tooltip>), "data-placement=\"top\""))
+    assert(contains(markup(<Tooltip text="Save" placement="end"><button>S</button></Tooltip>),
+                    "data-placement=\"end\""))
+
+@test
+AN_ID_OF_ITS_OWN_IDENTIFIES_THE_NOTE_AND_THE_DESCRIPTION_FOLLOWS_IT()
+    // **Two tooltips on one page would otherwise write the same id**, and an `aria-describedby`
+    // pointing at a duplicate points at whichever the browser found first.
+    val out = markup(<Tooltip text="Save" id="save"><button>S</button></Tooltip>)
+
+    assert(contains(out, "id=\"save\""))
+    assert(contains(out, "aria-describedby=\"save\""))
+    assertEq(countOf(out, "\"m-tooltip\""), 1)
+
+@test
+TWO_TOOLTIPS_ON_ONE_PAGE_EACH_DESCRIBE_THEIR_OWN_TRIGGER()
+    val out = markup(<Fragment><Tooltip text="One" id="one"><button>A</button></Tooltip>
+                               <Tooltip text="Two" id="two"><button>B</button></Tooltip></Fragment>)
+
+    assertEq(countOf(out, "aria-describedby=\"one\""), 1)
+    assertEq(countOf(out, "aria-describedby=\"two\""), 1)
+    assertEq(countOf(out, "role=\"tooltip\""), 2)
+
+@test
+A_CLASS_IS_APPENDED_TO_THE_COMPONENTS_OWN()
+    assert(contains(markup(<Tooltip text="Save" class="inline"><button>S</button></Tooltip>),
+                    "class=\"m-tooltip inline\""))
+
+@test
+THE_SHEET_GOES_ON_THE_PAGE_ONCE_AND_SO_DO_THE_TOKENS()
+    // **`.m-tooltip-note` contains `.m-tooltip`**, so what is counted is the rule's own opening
+    // brace -- the proxy `tokens.css` is counted by and the one `Tabs` and `Menu` need too.
+    val out = whole(<Tooltip text="Save"><button>S</button></Tooltip>)
+
+    assertEq(countOf(out, ".m-tooltip {"), 1)
+    assertEq(countOf(out, ":root {"), 1)
+
+@test
+TWO_TOOLTIPS_ON_ONE_PAGE_STILL_CARRY_ONE_COPY_OF_THE_SHEET()
+    val out = whole(<Fragment><Tooltip text="One" id="one"><button>A</button></Tooltip>
+                              <Tooltip text="Two" id="two"><button>B</button></Tooltip></Fragment>)
+
+    assertEq(countOf(out, ".m-tooltip {"), 1)
+
+@test
+A_NOTE_CANNOT_BE_POINTED_AT_AND_THE_SHEET_IS_WHERE_THAT_IS_SAID()
+    // **A pointer crossing the note is a pointer that has left the trigger.** It is one declaration
+    // and it is the difference between a description and a place, so it is worth a test.
+    assert(contains(whole(<Tooltip text="Save"><button>S</button></Tooltip>), "pointer-events: none"))
+
+// -- the refusals ------------------------------------------------------------------------------------
+
+@test
+A_TEXT_THAT_IS_NOT_TEXT_IS_REFUSED()
+    val said = fell(() -> markup(<Tooltip text={7}><button>S</button></Tooltip>))
+
+    assert(contains(said, "Tooltip's `text`"))
+    assert(contains(said, "7"))
+
+@test
+A_TOOLTIP_WITH_NO_TEXT_IS_REFUSED_BECAUSE_A_NOTE_IS_THE_WORDS_IN_IT()
+    assert(contains(fell(() -> markup(<Tooltip><button>S</button></Tooltip>)), "Tooltip's `text`"))
+
+@test
+AN_EMPTY_TEXT_IS_REFUSED_RATHER_THAN_DESCRIBING_A_CONTROL_WITH_A_SILENCE()
+    val said = fell(() -> markup(<Tooltip text=""><button>S</button></Tooltip>))
+
+    assert(contains(said, "Tooltip's `text`"))
+    assert(contains(said, "empty"))
+
+@test
+A_PLACEMENT_THAT_IS_NOT_ONE_OF_THE_FOUR_WORDS_IS_REFUSED_AND_THE_MESSAGE_LISTS_THEM()
+    val said = fell(() -> markup(<Tooltip text="Save" placement="above"><button>S</button></Tooltip>))
+
+    assert(contains(said, "Tooltip's `placement`"))
+    assert(contains(said, "\"top\", \"bottom\", \"start\", \"end\""))
+
+@test
+A_DELAY_THAT_IS_NOT_A_WHOLE_NUMBER_OF_MILLISECONDS_IS_REFUSED()
+    // **A fraction is not rounded and a negative is not clamped.** Either is a number somebody meant
+    // to write differently, and a timer that quietly worked anyway is how that goes unfound.
+    val one = fell(() -> markup(<Tooltip text="Save" delay="300"><button>S</button></Tooltip>))
+    val two = fell(() -> markup(<Tooltip text="Save" delay={-1}><button>S</button></Tooltip>))
+    val three = fell(() -> markup(<Tooltip text="Save" delay={1.5}><button>S</button></Tooltip>))
+
+    assert(contains(one, "Tooltip's `delay`"))
+    assert(contains(one, "milliseconds"))
+    assert(contains(two, "Tooltip's `delay`"))
+    assert(contains(three, "Tooltip's `delay`"))
+
+@test
+A_TOOLTIP_WITH_NO_TRIGGER_IS_REFUSED()
+    val said = fell(() -> markup(<Tooltip text="Save"/>))
+
+    assert(contains(said, "Tooltip's `children`"))
+    assert(contains(said, "nothing"))
+
+@test
+A_TOOLTIP_WITH_TWO_TRIGGERS_IS_REFUSED_AND_THE_MESSAGE_SAYS_HOW_MANY()
+    // Two controls sharing one description and one hover region is two mistakes, and the second one
+    // is that neither of them is the thing being described.
+    val said = fell(() -> markup(<Tooltip text="Save"><button>A</button><button>B</button></Tooltip>))
+
+    assert(contains(said, "Tooltip's `children`"))
+    assert(contains(said, "2 things"))
+
+@test
+AN_ID_THAT_IS_NOT_TEXT_IS_REFUSED()
+    assert(contains(fell(() -> markup(<Tooltip text="Save" id={9}><button>S</button></Tooltip>)),
+                    "Tooltip's `id`"))
+
+@test
+A_CLASS_THAT_IS_NOT_TEXT_IS_REFUSED_LIKE_EVERY_OTHER_COMPONENTS()
+    assert(contains(fell(() -> markup(<Tooltip text="Save" class={3}><button>S</button></Tooltip>)),
+                    "`class`"))

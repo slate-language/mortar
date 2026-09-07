@@ -1,0 +1,312 @@
+import { createElement, Fragment, mount } from lath
+import { domHost } from lath/dom
+import { Tooltip } from "../mortar.slx"
+import { activeElement, attribute, blur, byId, query } from dom
+
+import { at, beside, fire, focus as caretTo, inHead } from "./probe.slx"
+
+// The note against a real document, which is the only host that can show it.
+//
+// **EVERY CLAIM THIS FILE MAKES IS ONE A STRING CANNOT ANSWER.** Whether a pointer opens it, whether
+// it WAITS before it does, whether the caret opens it at once, what Escape does and -- the one that
+// makes Escape worth having here at all -- where the caret is left afterwards. The shape, the roles
+// and the description that ties the two together are in `tests/tooltip.slx`, because all of those a
+// server sends.
+
+countOf(s: string, sub: string) -> integer =
+    var found = 0
+    var from = 0
+
+    while true
+        val found_at = indexOf(s[from..], sub)
+
+        if found_at == null then break
+
+        found = found + 1
+        from = from + found_at + sub.length
+
+    found
+
+// The id of the element the caret is in, or empty where it is nowhere at all.
+caret() -> string =
+    val on = activeElement()
+
+    if on == null then return ""
+
+    attribute(on, "id") ?? ""
+
+// Whether the note is showing, which is the `hidden` attribute being gone.
+showing(own: string) -> boolean = attribute(byId(own), "hidden") == null
+
+// The wrapper the events are on, which is the trigger's parent and the element this component owns.
+wrapper() = query(".m-tooltip")
+
+// -- what a pointer does ------------------------------------------------------------------------------
+
+@test
+async A_NOTE_ARRIVES_HIDDEN()
+    at("")
+
+    mount(<Tooltip text="Delete this thread"><button type="button" id="go">Delete</button></Tooltip>,
+          domHost("#page"))
+
+    await sleep(1)
+
+    assertEq(showing("m-tooltip"), false)
+    assertEq(caret(), "")
+
+@test
+async THE_SHEET_ARRIVES_WITH_THE_TOOLTIP_AND_ONLY_ONCE()
+    // **The head is shared by the whole of this suite**, so what is asserted is that the count is 1
+    // rather than that it went from nothing to one.
+    at("")
+
+    mount(<Tooltip text="Delete"><button type="button" id="go">Delete</button></Tooltip>,
+          domHost("#page"))
+
+    await sleep(1)
+
+    assertEq(countOf(inHead(), ".m-tooltip {"), 1)
+
+@test
+async A_POINTER_WAITS_THE_DELAY_AND_THE_NOTE_IS_NOT_THERE_BEFORE_IT()
+    // **The wait is the whole difference between a tooltip and a flicker.** A pointer crossing a
+    // toolbar passes over six controls, and a note that appeared the instant it arrived would open
+    // and shut six times on the way to the seventh.
+    at("")
+
+    mount(<Tooltip text="Delete" delay={40}><button type="button" id="go">Delete</button></Tooltip>,
+          domHost("#page"))
+
+    await sleep(1)
+
+    fire(wrapper(), "mouseenter")
+
+    await sleep(1)
+
+    assertEq(showing("m-tooltip"), false)
+
+    await sleep(80)
+
+    assertEq(showing("m-tooltip"), true)
+
+@test
+async A_POINTER_LEAVING_HIDES_THE_NOTE_AT_ONCE()
+    at("")
+
+    mount(<Tooltip text="Delete" delay={20}><button type="button" id="go">Delete</button></Tooltip>,
+          domHost("#page"))
+
+    await sleep(1)
+
+    fire(wrapper(), "mouseenter")
+
+    await sleep(60)
+
+    assertEq(showing("m-tooltip"), true)
+
+    fire(wrapper(), "mouseleave")
+
+    await sleep(1)
+
+    assertEq(showing("m-tooltip"), false)
+
+@test
+async A_POINTER_THAT_LEAVES_BEFORE_THE_WAIT_IS_OVER_NEVER_OPENS_IT()
+    // **The timer is taken back and not merely ignored**, which is what stops a note from appearing
+    // over a control the pointer left a third of a second ago.
+    at("")
+
+    mount(<Tooltip text="Delete" delay={40}><button type="button" id="go">Delete</button></Tooltip>,
+          domHost("#page"))
+
+    await sleep(1)
+
+    fire(wrapper(), "mouseenter")
+
+    await sleep(1)
+
+    fire(wrapper(), "mouseleave")
+
+    await sleep(80)
+
+    assertEq(showing("m-tooltip"), false)
+
+// -- what the caret does ------------------------------------------------------------------------------
+
+@test
+async THE_CARET_ARRIVING_SHOWS_THE_NOTE_AT_ONCE()
+    // **A caret is somewhere on purpose**, which is why it does not wait: a reader who tabbed to a
+    // control asked about that control, where a pointer crossing one may only be on its way past.
+    at("")
+
+    mount(<Tooltip text="Delete" delay={5000}><button type="button" id="go">Delete</button></Tooltip>,
+          domHost("#page"))
+
+    await sleep(1)
+
+    caretTo(byId("go"))
+
+    await sleep(1)
+
+    assertEq(showing("m-tooltip"), true)
+    assertEq(caret(), "go")
+
+@test
+async THE_CARET_LEAVING_HIDES_IT()
+    at("")
+
+    mount(<Tooltip text="Delete"><button type="button" id="go">Delete</button></Tooltip>,
+          domHost("#page"))
+
+    await sleep(1)
+
+    caretTo(byId("go"))
+
+    await sleep(1)
+
+    assertEq(showing("m-tooltip"), true)
+
+    blur(byId("go"))
+
+    await sleep(1)
+
+    assertEq(showing("m-tooltip"), false)
+
+@test
+async THE_CARET_MOVING_TO_ANOTHER_CONTROL_HIDES_IT()
+    // The ordinary way a note goes away: the reader tabbed on.
+    beside("<button type=\"button\" id=\"away\">Away</button>")
+
+    mount(<Tooltip text="Delete"><button type="button" id="go">Delete</button></Tooltip>,
+          domHost("#page"))
+
+    await sleep(1)
+
+    caretTo(byId("go"))
+
+    await sleep(1)
+
+    assertEq(showing("m-tooltip"), true)
+
+    caretTo(byId("away"))
+
+    await sleep(1)
+
+    assertEq(showing("m-tooltip"), false)
+    assertEq(caret(), "away")
+
+// -- Escape ---------------------------------------------------------------------------------------
+
+@test
+async ESCAPE_HIDES_THE_NOTE_AND_LEAVES_THE_CARET_EXACTLY_WHERE_IT_WAS()
+    // **This is the whole of what separates a tooltip from a `Menu`.** A menu is a place the caret
+    // went and Escape gives it back; a note is something that appeared beside where the caret
+    // already is, so Escape takes the note away and moves nothing.
+    at("")
+
+    mount(<Tooltip text="Delete"><button type="button" id="go">Delete</button></Tooltip>,
+          domHost("#page"))
+
+    await sleep(1)
+
+    caretTo(byId("go"))
+
+    await sleep(1)
+
+    assertEq(showing("m-tooltip"), true)
+    assertEq(caret(), "go")
+
+    fire(query("body"), "keydown key=Escape")
+
+    await sleep(1)
+
+    assertEq(showing("m-tooltip"), false)
+    assertEq(caret(), "go")
+
+@test
+async A_KEY_THAT_IS_NOT_ESCAPE_LEAVES_THE_NOTE_ALONE()
+    at("")
+
+    mount(<Tooltip text="Delete"><button type="button" id="go">Delete</button></Tooltip>,
+          domHost("#page"))
+
+    await sleep(1)
+
+    caretTo(byId("go"))
+
+    await sleep(1)
+
+    fire(query("body"), "keydown key=a")
+
+    await sleep(1)
+
+    assertEq(showing("m-tooltip"), true)
+
+@test
+async THE_LISTENER_IS_ONLY_THERE_WHILE_THE_NOTE_IS()
+    // **Escape on a page whose notes are all shut is Escape doing whatever the page does with it.**
+    // A hidden tooltip has no listener on the document at all, which is what makes a page of forty
+    // of them cost nothing until one is open.
+    at("")
+
+    mount(<Tooltip text="Delete"><button type="button" id="go">Delete</button></Tooltip>,
+          domHost("#page"))
+
+    await sleep(1)
+
+    fire(query("body"), "keydown key=Escape")
+
+    await sleep(1)
+
+    assertEq(showing("m-tooltip"), false)
+
+    caretTo(byId("go"))
+
+    await sleep(1)
+
+    assertEq(showing("m-tooltip"), true)
+
+// -- the description ------------------------------------------------------------------------------
+
+@test
+async THE_TRIGGER_POINTS_AT_A_NOTE_THAT_IS_ACTUALLY_ON_THE_PAGE()
+    // **A description that names an element the page does not have is a description nothing reads**,
+    // and it is the one claim here that needs a document to make: a string can say the two spellings
+    // match and only a page can say the second one is a node.
+    at("")
+
+    mount(<Tooltip text="Delete this thread" id="del"><button type="button" id="go">Delete</button></Tooltip>,
+          domHost("#page"))
+
+    await sleep(1)
+
+    val named = attribute(byId("go"), "aria-describedby")
+
+    assertEq(named, "del")
+    assert(byId(named) != null)
+    assertEq(attribute(byId(named), "role"), "tooltip")
+
+@test
+async TWO_TOOLTIPS_ON_ONE_PAGE_OPEN_AND_SHUT_INDEPENDENTLY()
+    at("")
+
+    mount(<Fragment><Tooltip text="One" id="one"><button type="button" id="a">A</button></Tooltip>
+                    <Tooltip text="Two" id="two"><button type="button" id="b">B</button></Tooltip></Fragment>,
+          domHost("#page"))
+
+    await sleep(1)
+
+    caretTo(byId("a"))
+
+    await sleep(1)
+
+    assertEq(showing("one"), true)
+    assertEq(showing("two"), false)
+
+    caretTo(byId("b"))
+
+    await sleep(1)
+
+    assertEq(showing("one"), false)
+    assertEq(showing("two"), true)

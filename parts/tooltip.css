@@ -1,0 +1,95 @@
+/* A short note about the thing under the pointer.
+ *
+ * **IT IS THE SUNKEN SURFACE, WHICH IS THE LIBRARY'S TONE FOR *THE SOFTWARE TALKING*.** A `Card` is
+ * flat, a `Post` is raised, a menu is over the page and a modal is in front of it; a note is none of
+ * those, because it is not a surface anybody is doing anything on. It is recessed and small and it
+ * goes away, and the elevation it does carry is the one that says it is not part of the paragraph
+ * underneath.
+ *
+ * **NOTHING IN IT CAN BE POINTED AT.** `pointer-events: none` is the rule that makes a tooltip a
+ * description rather than a place: a pointer crossing the note is a pointer that has left the
+ * trigger, and a note that swallowed its own `mouseleave` would be a note that stayed open until
+ * something else took the caret.
+ *
+ * **IT DOES NOT MEASURE AND SO IT DOES NOT MOVE.** Each side is an absolute rule against the
+ * wrapper, written with `inset-inline` so that `start` and `end` mean the reading order and not the
+ * left and the right. A note on the `end` of a control against the edge of the window runs off it,
+ * and the answer is the caller naming another side.
+ *
+ * **Motion is `--m-quick` and nothing else**, so the reduced-motion block in `tokens.css` covers it
+ * without a query of its own; `@starting-style` is what gives an element that was `display: none` an
+ * opacity to come from.
+ */
+
+.m-tooltip {
+    position: relative;
+    display: inline-block;
+
+    & .m-tooltip-note {
+        position: absolute;
+        z-index: 40;
+        width: max-content;
+        max-width: min(16rem, calc(100vw - var(--m-space-6)));
+        padding: var(--m-space-1) var(--m-space-2);
+        background: var(--m-sunken);
+        color: var(--m-ink);
+        border: 1px solid var(--m-line);
+        border-radius: var(--m-radius-sm);
+        box-shadow: var(--m-shadow-sm);
+        font-size: var(--m-text-sm);
+        line-height: var(--m-lead-ui);
+        font-weight: var(--m-weight-normal);
+        text-align: start;
+        pointer-events: none;
+        opacity: 1;
+        transition: opacity var(--m-quick) var(--m-ease);
+
+        @starting-style { opacity: 0; }
+
+        /* **`hidden` is written out rather than left to the browser**, the rule above having given
+         * the note a `display` of its own -- and a layout rule beats the user agent's `[hidden]`
+         * every time. */
+        &[hidden] { display: none; }
+
+        &[data-placement="top"] {
+            bottom: calc(100% + var(--m-space-1));
+            inset-inline-start: 50%;
+            transform: translateX(-50%);
+        }
+
+        &[data-placement="bottom"] {
+            top: calc(100% + var(--m-space-1));
+            inset-inline-start: 50%;
+            transform: translateX(-50%);
+        }
+
+        &[data-placement="start"] {
+            inset-inline-end: calc(100% + var(--m-space-1));
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        &[data-placement="end"] {
+            inset-inline-start: calc(100% + var(--m-space-1));
+            top: 50%;
+            transform: translateY(-50%);
+        }
+    }
+
+    /* On a phone a note is as wide as the screen less a margin, and the two side placements have
+     * nowhere to go -- a control with a note beside it on a 320 pixel screen is a control with no
+     * room for either -- so they go underneath instead. */
+    @media (width < 26rem) {
+        & .m-tooltip-note {
+            max-width: calc(100vw - var(--m-space-5));
+
+            &[data-placement="start"], &[data-placement="end"] {
+                top: calc(100% + var(--m-space-1));
+                bottom: auto;
+                inset-inline-start: 0;
+                inset-inline-end: auto;
+                transform: none;
+            }
+        }
+    }
+}

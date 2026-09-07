@@ -1,0 +1,190 @@
+// A short note about the thing under the pointer.
+//
+// **IT IS THE WAI-ARIA TOOLTIP PATTERN, WHICH MEANS IT IS A DESCRIPTION AND NOT A PLACE TO PUT
+// ANYTHING.** A tooltip says the same thing its trigger already says, in more words -- what the icon
+// button does, what the abbreviation stands for, why a control is where it is. Nothing in it can be
+// pressed, nothing in it can be selected, and nothing that only appears in it is information the
+// page has: a reader on a phone never opens one, and a reader who never leaves the keyboard opens it
+// only where the caret goes. Where the words matter, they belong in the page -- a `hint` under a
+// `Field`, an `EmptyState`, a `Problem`.
+//
+// **THE TRIGGER IS THE CHILD AND THERE IS EXACTLY ONE OF IT.** The component wraps whatever it was
+// given in a `<span>` it can hang a note off, and points the trigger's `aria-describedby` at that
+// note -- so the words are announced as a description of the control rather than read as a second
+// thing on the page.
+//
+//     <Tooltip text="Delete this thread"><Button variant="danger" label="Delete" onClick={remove}/></Tooltip>
+//
+// **THE NOTE IS RENDERED AND HIDDEN RATHER THAN ABSENT**, exactly as `Menu`'s list is: a server
+// sends the whole thing carrying `hidden`, so a page whose script never ran still has the
+// description in it for anything that reads the markup, and a hydrating page has nothing to correct.
+//
+// **THE EVENTS ARE ON THE WRAPPER AND NOT ON THE TRIGGER, AND THAT IS FORCED RATHER THAN CHOSEN.**
+// `dom`'s event record carries no `target`, and the trigger is an arbitrary element this component
+// did not write -- so a handler put on the child would be a handler on something whose own props
+// this file would have to merge with, and one on the wrapper is a handler on an element it owns.
+// `mouseenter` and `mouseleave` on a wrapper fire when the pointer enters and leaves the whole of
+// it, which is the trigger and the note together, and `focusin` and `focusout` bubble, so the caret
+// arriving anywhere inside is the caret arriving on the trigger.
+//
+// **THE POINTER WAITS AND THE CARET DOES NOT.** A tooltip that appeared the instant a pointer
+// crossed it would flash open on the way past every control on a toolbar, which is what `delay` is
+// for; a caret is somewhere on purpose, so `focusin` shows the note at once. Hiding never waits, in
+// either direction.
+//
+// **IT DOES NOT MEASURE ANYTHING AND SO IT DOES NOT MOVE.** `placement` says which side the note is
+// on and the stylesheet puts it there; a tooltip on the `end` of a control against the right edge of
+// the window is a tooltip that runs off it. Flipping is a measurement, a measurement is a read of
+// the page's layout, and a component that reads layout renders differently on a server -- so the
+// side is the caller's to name.
+
+import { createElement, Fragment, useState, useRef, useEffect, style } from lath
+import { off, on, query } from dom
+
+import tokens from "./tokens.css"
+import sheet from "./tooltip.css"
+
+import { choice as oneOf, classes, list, millis, text } from "./props.sl"
+
+// Which side of the trigger the note sits on.
+export val Placements = ["top", "bottom", "start", "end"]
+
+// The trigger, told which element describes it.
+//
+// **A lath element is a record of three fields -- `type`, `props` and `key` -- and rebuilding one is
+// how a prop is added to a child.** There is no `cloneElement` here, and the type is exported, so
+// what would be a call in React is a record literal in slate.
+//
+// **It answers nothing where the child is not a plain tag**, which is a text child or a component of
+// the application's own: an attribute handed to a component is a prop that component has to pass on,
+// and one written on a string is nowhere at all. The wrapper carries the description in that case,
+// which is where the caller put the words anyway.
+described(kid, own: string) =
+    if !(kid is object) then return null
+
+    val what = kid.type ?? null
+
+    if !(what is string) then return null
+    if what == Fragment then return null
+
+    { type: what, props: (kid.props ?? {}) with { "aria-describedby": own }, key: kid.key ?? null }
+
+// A short note about the thing under the pointer.
+export tooltip({ text: words = null, placement = "top", delay = 300, id = "m-tooltip",
+                 class: extra = "", children = [] }) =
+    style(tokens)
+    style(sheet)
+
+    val said = text("Tooltip", "text", words)
+
+    // **A tooltip with nothing to say is refused rather than rendered empty.** An empty note is a
+    // description that describes nothing, and a trigger pointed at one is a control that announces
+    // its own name and then a silence.
+    if said == ""
+        throw "Tooltip's `text` says something, and is empty"
+
+    val where = oneOf("Tooltip", "placement", placement, Placements)
+    val wait = millis("Tooltip", "delay", delay)
+    val own = text("Tooltip", "id", id)
+    val kids = list("Tooltip", "children", children)
+
+    // **One child, because the child IS the trigger.** Two of them would be two controls sharing one
+    // description and one hover region, and none of them would be a note about nothing.
+    if kids.length != 1
+        val many = if kids.length == 0 then "nothing" else string(kids.length) + " things"
+
+        throw "Tooltip's `children` is the one thing the note describes, and is " + many
+
+    val [shown, setShown] = useState(false)
+
+    // The timer the pointer is waiting on. **A ref and not state**: it decides what happens after a
+    // render rather than what a render says, and putting it in state would draw the page again for
+    // every pointer that crossed the control and left.
+    val timer = useRef(null)
+
+    stop() =
+        if timer.current != null
+            clearTimeout(timer.current)
+
+            timer.current = null
+
+        null
+
+    fired() =
+        timer.current = null
+
+        setShown(true)
+
+        null
+
+    // Shown, after however long the caller asked for. **A `delay` of zero is not a timer at all**,
+    // which is what makes `<Tooltip delay={0}>` a tooltip that is simply immediate rather than one
+    // that is a scheduling round late.
+    show(after: integer) =
+        stop()
+
+        if after == 0
+            setShown(true)
+        else
+            timer.current = setTimeout(fired, after)
+
+        null
+
+    hide() =
+        stop()
+
+        setShown(false)
+
+        null
+
+    entered(e) = show(wait)
+    left(e) = hide()
+    gained(e) = show(0)
+    lost(e) = hide()
+
+    // **Escape closes it and leaves the caret exactly where it was**, which is the whole of the
+    // difference between this and `Menu`: a menu is a place the caret went and a tooltip is
+    // something that appeared beside where the caret already is. A reader who presses Escape wants
+    // the note off the control they are still on, not to be sent somewhere.
+    //
+    // The listener is on the document and it is installed only while the note is shown, so a page of
+    // forty of these has no listeners on it until one is open. `dom`'s event record carries no
+    // `target`, but nothing here needs one: whatever else the reader is doing, Escape means this.
+    watch() =
+        if !shown then return null
+        if host() != "browser" then return null
+
+        val body = query("body")
+
+        if body == null then return null
+
+        asked(e) =
+            if e.key == "Escape" then hide()
+
+            null
+
+        on(body, "keydown", asked)
+
+        () -> off(body, "keydown", asked)
+
+    useEffect(watch, [shown])
+
+    // **A timer outlives the component that armed it**, and a tooltip is torn down mid-wait every
+    // time a list it is in is filtered. Nothing here would fault -- `setShown` on a gone instance is
+    // a no-op -- but a timer nobody is waiting on is a timer holding this closure and everything it
+    // closed over until it fires.
+    useEffect(() -> stop, [])
+
+    val kid = kids[0]
+    val told = described(kid, own)
+
+    val out = <span class={classes("Tooltip", "m-tooltip", extra)}
+                    onMouseEnter={entered} onMouseLeave={left}
+                    onFocusIn={gained} onFocusOut={lost}
+                    {...(if told == null then { "aria-describedby": own } else {})}>
+        {told ?? kid}
+        <span role="tooltip" id={own} class="m-tooltip-note" data-placement={where}
+              hidden={!shown}>{said}</span>
+    </span>
+
+    out

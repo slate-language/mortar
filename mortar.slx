@@ -44,6 +44,7 @@
 // | `Button` | `kind`, `variant`, `disabled`, `onClick`, `label`, `children` |
 // | `Actions` | `children` |
 // | `Menu` | `items`, `label`, `align`, `id` |
+// | `Tooltip` | `text`, `placement`, `delay`, `id`, `children` |
 // | `Confirm` | `open`, `title`, `detail`, `confirmLabel`, `cancelLabel`, `tone`, `onConfirm`, `onCancel`, `id` |
 // | `VisuallyHidden` | `tag`, `children` |
 //
@@ -70,6 +71,7 @@ import { button, actions, Kinds as buttonKinds, Variants as buttonVariants } fro
 import { hidden } from "./parts/hidden.slx"
 import { confirm } from "./parts/confirm.slx"
 import { menu } from "./parts/menu.slx"
+import { tooltip } from "./parts/tooltip.slx"
 
 // -- the theme -------------------------------------------------------------------------------------
 
@@ -134,6 +136,16 @@ export val Actions = actions
 // are pressed. It is the library's second keyboard-navigated control, after `Tabs`.
 
 export val Menu = menu
+
+// -- a note about the thing under the pointer ---------------------------------------------------------
+//
+// **`Tooltip` describes its trigger and holds nothing of its own.** The words in it say again, at
+// more length, what the control they are attached to already says; anything only the tooltip knows is
+// information a reader on a phone never sees, so it belongs in the page -- a `Field`'s `hint`, an
+// `EmptyState`, a `Problem`. The note is rendered carrying `hidden` and only the SHOWING needs a
+// browser, which is `Menu`'s arrangement and not `Confirm`'s.
+
+export val Tooltip = tooltip
 
 // -- asking before something irreversible ------------------------------------------------------------
 //

@@ -100,6 +100,7 @@ Toast's `messages`, item 1, has no `id`
 | `Button` | `kind`, `variant`, `disabled`, `onClick`, `label`, `children` |
 | `Actions` | `children` |
 | `Menu` | `items`, `label`, `align`, `id` |
+| `Tooltip` | `text`, `placement`, `delay`, `id`, `children` |
 | `Confirm` | `open`, `title`, `detail`, `confirmLabel`, `cancelLabel`, `tone`, `onConfirm`, `onCancel`, `id` |
 
 Plus ten exported lists of the words a prop may be — `Themes`, `Sizes`, `Shows`, `CardLevels`,
@@ -317,6 +318,27 @@ record carries no target, so asking *"was that click inside me"* of the event is
 program can do. The root stops clicks only while its own menu is open, which is what lets a second
 `Menu`'s button close the first one on the way past.
 
+## A note about the thing under the pointer
+
+**`Tooltip` describes its trigger and holds nothing of its own.** The words say again, at more length,
+what the control already says; anything only the tooltip knows is information a reader on a phone
+never sees, so it belongs in the page — a `Field`'s `hint`, an `EmptyState`, a `Problem`.
+
+```slate
+<Tooltip text="Delete this thread"><Button variant="danger" label="Delete" onClick={remove}/></Tooltip>
+```
+
+The single child is the trigger and comes back with `aria-describedby` pointing at the note, so the
+words are announced as a description of the control rather than read as a second thing on the page.
+The note itself is rendered carrying `hidden`, so a server sends the description and only the showing
+of it needs a browser. A pointer entering shows it after `delay` and leaving hides it at once; the
+caret shows and hides it immediately; **Escape hides it and leaves the caret exactly where it was**,
+a tooltip being something that appeared beside the reader rather than a place the reader went.
+
+**It measures nothing and so it does not reposition at a viewport edge** — `placement` names the side
+and the stylesheet puts the note there. Flipping would be a read of the page's layout, and a
+component that reads layout renders differently on a server.
+
 ## Confirming a destructive action
 
 **`Confirm` is the one component here that renders nothing on a server** — open or closed, not even
@@ -361,10 +383,11 @@ That is not free. `{n} replies` is a run of text children a parser reads back as
 lath 0.5.1 settled them in the tree. Every component here is written the ordinary way and the suite
 is what says so.
 
-**Four components import a host, and every other one imports none.** `Theme` reaches `dom` for
+**Five components import a host, and every other one imports none.** `Theme` reaches `dom` for
 the cookie it persists a colour with, `Confirm` reaches it for the body it portals into and the caret
-it moves, `Tabs` reaches it for the tab an arrow key puts the caret in, and `Menu` reaches it for the
-item an opening puts the caret on and the body listener that closes it; each asks `host()` first,
+it moves, `Tabs` reaches it for the tab an arrow key puts the caret in, `Menu` reaches it for the
+item an opening puts the caret on and the body listener that closes it, and `Tooltip` reaches it for
+the document listener Escape is read off while a note is showing; each asks `host()` first,
 so the call is simply not made where there is no browser to make it in. Everything else in the library is host-free and renders under the interpreter, beside
 `slate:http` on a server, and in a browser, from the same source.
 
