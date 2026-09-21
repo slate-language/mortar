@@ -171,7 +171,7 @@ kindsOf(accept)
 sizeOf(bytes)
     if bytes == null then return null
     if bytes < 1024 then return string(bytes) + " bytes"
-    if bytes < 1048576 then return string(bytes / 1024) + " KB"
-    if bytes < 1073741824 then return string(bytes / 1048576) + " MB"
+    if bytes < 1048576 then return string(bytes \ 1024) + " KB"
+    if bytes < 1073741824 then return string(bytes \ 1048576) + " MB"
 
-    string(bytes / 1073741824) + " GB"
+    string(bytes \ 1073741824) + " GB"

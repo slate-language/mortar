@@ -27,7 +27,7 @@ export pagination({ page = 1, size = 20, total = 0, href = null, onChoose = null
     if per == 0
         throw "Pagination's `size` is how many rows are on a page, and is 0"
 
-    val pages = if all == 0 then 1 else ((all + per - 1) / per)
+    val pages = if all == 0 then 1 else ((all + per - 1) \ per)
 
     // **A step that has nowhere to go does not render at all.** Not a disabled anchor -- there is no
     // such thing: a keyboard still stops on one, and `aria-disabled` on a link that still navigates
