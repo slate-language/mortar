@@ -130,9 +130,11 @@ export tabs({ tabs: all = [], selected = null, initial = null, onSelect = null, 
 
         null
 
-    one(row) =
+    // **A tab's place in the row is the index `map` hands it**, and not a search of `ids` for its
+    // id: `ids` is built from these same rows in this same order, so the two are one number, and
+    // taking it from the map leaves no "not in the row" answer for the arrow keys to do sums on.
+    one(row, at: integer) =
         val who = row.id
-        val at = ids.indexOf(who)
         val here = on == who
 
         picked(e) =
