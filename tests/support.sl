@@ -43,6 +43,8 @@ export tree(out: string) -> string =
 
         val closed = indexOf(rest, "</style>")
 
+        if closed == null then break
+
         rest = rest[0..<opened] + rest[(closed + 8)..]
 
     rest

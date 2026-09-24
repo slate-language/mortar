@@ -83,7 +83,9 @@ A_HINT_AND_AN_ERROR_ARE_BOTH_NAMED_AND_THE_ERROR_IS_FIRST()
     val out = markup(<Field name="title" hint="be brief" error="is missing"/>)
 
     assert(contains(out, "aria-describedby=\"f-title-error f-title-hint\""))
-    assert(indexOf(out, "m-error") < indexOf(out, "m-hint"))
+    val error_at = indexOf(out, "m-error")
+    val hint_at = indexOf(out, "m-hint")
+    assert(error_at != null && hint_at != null && error_at < hint_at)
 
 @test
 A_FIELD_WITH_NEITHER_HAS_NO_DESCRIBEDBY_AT_ALL()

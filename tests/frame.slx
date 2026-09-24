@@ -35,7 +35,9 @@ THE_HEADERS_PIECES_ARE_SLOTS_AND_NOT_PROPS()
     assert(contains(out, "<form class=\"m-form m-search\""))
     assert(contains(out, "<nav class=\"m-me\" aria-label=\"You\">"))
     assert(contains(out, "<footer class=\"m-foot\"><p>a footer</p></footer>"))
-    assert(indexOf(out, "m-search") < indexOf(out, "m-me"))
+    val search_at = indexOf(out, "m-search")
+    val me_at = indexOf(out, "m-me")
+    assert(search_at != null && me_at != null && search_at < me_at)
 
 @test
 A_PAGE_WITH_NO_FOOTER_RENDERS_NONE()
@@ -108,4 +110,6 @@ THE_SHEETS_ARRIVE_IN_FRONT_OF_THE_MARKUP_SO_A_FRAGMENT_IS_SELF_CONTAINED()
     val out = html(mount(<Page brand="b"/>))
 
     assert(startsWith(out, "<style data-lath-style>"))
-    assert(indexOf(out, "<div class=\"m-shell\"") > indexOf(out, "</style>"))
+    val shell_at = indexOf(out, "<div class=\"m-shell\"")
+    val style_end = indexOf(out, "</style>")
+    assert(shell_at != null && style_end != null && shell_at > style_end)
