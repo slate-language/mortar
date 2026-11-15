@@ -38,7 +38,7 @@
 // the page's layout, and a component that reads layout renders differently on a server -- so the
 // side is the caller's to name.
 
-import { createElement, Fragment, useState, useRef, useEffect, style } from lath
+import { cloneElement, createElement, Fragment, useState, useRef, useEffect, style } from lath
 import { off, on, query } from dom
 
 import tokens from "./tokens.css"
@@ -51,9 +51,8 @@ export val Placements = ["top", "bottom", "start", "end"]
 
 // The trigger, told which element describes it.
 //
-// **A lath element is a record of three fields -- `type`, `props` and `key` -- and rebuilding one is
-// how a prop is added to a child.** There is no `cloneElement` here, and the type is exported, so
-// what would be a call in React is a record literal in slate.
+// **`cloneElement` is how a prop is added to a child**: the copy keeps the child's type, its own
+// props, its children and its key, and the new prop is written over them.
 //
 // **It answers nothing where the child is not a plain tag**, which is a text child or a component of
 // the application's own: an attribute handed to a component is a prop that component has to pass on,
@@ -67,7 +66,7 @@ described(kid, own: string) =
     if !(what is string) then return null
     if what == Fragment then return null
 
-    { type: what, props: (kid.props ?? {}) with { "aria-describedby": own }, key: kid.key ?? null }
+    cloneElement(kid, { "aria-describedby": own })
 
 // A short note about the thing under the pointer.
 export tooltip({ text: words = null, placement = "top", delay = 300, id = "m-tooltip",
