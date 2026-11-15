@@ -409,7 +409,7 @@ so it cannot change by accident.
 
 ## Requirements
 
-slate **0.0.40** or newer, lath **0.8.0** or newer, and the `dom` package, **0.1.1** or newer.
+slate **0.2.1** or newer, lath **0.11.0** or newer, and the `dom` package, **0.1.1** or newer.
 `dom` replaces the compiler's built-in `slate:dom` with the same forty-four names over `external`;
 0.0.40 is its own floor, and `focus`, `blur` and `activeElement` are still what `Confirm` needs to
 move a caret, give one back, and trap Tab. The lath floor is not a preference: the theme lives in an
